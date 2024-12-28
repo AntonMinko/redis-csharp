@@ -4,13 +4,19 @@ using System.Text.Unicode;
 
 namespace codecrafters_redis;
 
-public class TcpConnectionWorker(Socket socket) : IDisposable
+public interface IWorker
 {
-    public async Task HandleConnectionAsync()
+    Task HandleConnectionAsync(Socket socket);
+}
+
+public class TcpConnectionWorker(IStorage storage): IWorker
+{
+    public async Task HandleConnectionAsync(Socket socket)
     {
         try
         {
-            while (socket.Connected) {
+            while (socket.Connected)
+            {
                 var buffer = new byte[1024];
                 var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
                 if (received == 0)
@@ -18,15 +24,16 @@ public class TcpConnectionWorker(Socket socket) : IDisposable
                     Console.WriteLine("Socket disconnected");
                     break;
                 }
+
                 var requestPayload = Encoding.UTF8.GetString(buffer, 0, received);
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
-                
+
                 var command = requestPayload.Parse();
-                var response = new CommandHandler().Handle(command);
-                
+                var response = new CommandHandler(storage).Handle(command);
+
                 await socket.SendAsync(response, SocketFlags.None);
             }
-            
+
             socket.Close();
             Console.WriteLine("Connection closed");
         }
@@ -34,10 +41,9 @@ public class TcpConnectionWorker(Socket socket) : IDisposable
         {
             Console.WriteLine(e);
         }
-    }
-
-    public void Dispose()
-    {
-        socket.Dispose();
+        finally
+        {
+            socket.Dispose();
+        }
     }
 }

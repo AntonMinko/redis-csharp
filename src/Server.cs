@@ -1,26 +1,33 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using codecrafters_redis;
+using Microsoft.Extensions.DependencyInjection;
 
-Console.WriteLine("Logs from your program will appear here!");
+namespace codecrafters_redis;
 
-TcpListener server = new TcpListener(IPAddress.Any, 6379);
-
-while (true)
+public class Server(IServiceProvider serviceProvider)
 {
-    try
+    internal async Task StartAndListen()
     {
-        server.Start(10);
-        var socket = await server.AcceptSocketAsync(); // wait for client
-        Console.WriteLine("Connected new client!");
-        var handler = new TcpConnectionWorker(socket);
-        var thread = new Thread(() => handler.HandleConnectionAsync());
-        thread.Start();
-    }
-    finally
-    {
-        server.Stop();
+        Console.WriteLine("Logs from your program will appear here!");
+
+        TcpListener server = new TcpListener(IPAddress.Any, 6379);
+
+        while (true)
+        {
+            try
+            {
+                server.Start(10);
+                var socket = await server.AcceptSocketAsync(); // wait for client
+                Console.WriteLine("Connected new client!");
+                
+                var worker = serviceProvider.GetRequiredService<IWorker>();
+                var thread = new Thread(() => worker.HandleConnectionAsync(socket));
+                thread.Start();
+            }
+            finally
+            {
+                server.Stop();
+            }
+        }
     }
 }
-
