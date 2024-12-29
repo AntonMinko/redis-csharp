@@ -41,9 +41,5 @@ public class TcpConnectionWorker(IStorage storage): IWorker
         {
             Console.WriteLine(e);
         }
-        finally
-        {
-            socket.Dispose();
-        }
     }
 }

@@ -21,13 +21,21 @@ public class Server(IServiceProvider serviceProvider)
                 Console.WriteLine("Connected new client!");
                 
                 var worker = serviceProvider.GetRequiredService<IWorker>();
-                var thread = new Thread(() => worker.HandleConnectionAsync(socket));
-                thread.Start();
+
+                _ = Task.Run(async () => await HandleConnectionAsync(socket, worker));
             }
             finally
             {
                 server.Stop();
             }
+        }
+    }
+
+    private static async Task HandleConnectionAsync(Socket socket, IWorker worker)
+    {
+        using (socket)
+        {
+            await worker.HandleConnectionAsync(socket);
         }
     }
 }

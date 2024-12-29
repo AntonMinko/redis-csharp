@@ -1,12 +1,9 @@
-using System.Reflection.Metadata;
 using System.Text;
 
 namespace codecrafters_redis;
 
 public class CommandHandler(IStorage storage)
 {
-    private readonly IStorage _storage = storage;
-
     public byte[] Handle(List<string> command)
     {
         switch (command[0].ToUpperInvariant())
@@ -33,7 +30,16 @@ public class CommandHandler(IStorage storage)
         
         var key = command[1];
         var value = command[2];
-        _storage.Set(key, value);
+        int? expiresAfterMs = null;
+        if (command.Count == 5 && command[3].ToUpperInvariant() == "PX")
+        {
+            if (int.TryParse(command[4], out int ms))
+            {
+                expiresAfterMs = ms;
+            }
+        }
+        
+        storage.Set(key, value, expiresAfterMs);
         return null;
     }
 
@@ -42,7 +48,7 @@ public class CommandHandler(IStorage storage)
         if (command.Count < 2) return null;
         
         var key = command[1];
-        return _storage.Get(key);
+        return storage.Get(key);
     }
 
     private byte[] SimpleString(string s)
