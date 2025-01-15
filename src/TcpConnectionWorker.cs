@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Unicode;
+using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis;
 
@@ -9,7 +10,7 @@ public interface IWorker
     Task HandleConnectionAsync(Socket socket);
 }
 
-public class TcpConnectionWorker(IStorage storage): IWorker
+public class TcpConnectionWorker(IStorage storage, IUserSettingsProvider userSettingsProvider): IWorker
 {
     public async Task HandleConnectionAsync(Socket socket)
     {
@@ -29,7 +30,7 @@ public class TcpConnectionWorker(IStorage storage): IWorker
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
 
                 var command = requestPayload.Parse();
-                var response = new CommandHandler(storage).Handle(command);
+                var response = new CommandHandler(storage, userSettingsProvider).Handle(command);
 
                 await socket.SendAsync(response, SocketFlags.None);
             }
