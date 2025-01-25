@@ -3,7 +3,7 @@ using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis;
 
-public class CommandHandler(IStorage storage, IUserSettingsProvider userSettingsProvider)
+internal class CommandHandler(IStorage storage, IUserSettingsProvider userSettingsProvider)
 {
     public byte[] Handle(List<string> command)
     {
@@ -19,10 +19,29 @@ public class CommandHandler(IStorage storage, IUserSettingsProvider userSettings
                 return HandleSet(command);
             case "CONFIG":
                 return HandleConfig(command);
+            case "KEYS":
+                return HandleKeys(command);
             default:
                 Console.WriteLine("Unknown command: " + String.Join(" ", command));
                 return ErrorString($"Unknown command {command[0]}");
         }
+    }
+
+    private byte[] HandleKeys(List<string> command)
+    {
+        if (command.Count == 1 || command.Count > 3)
+        {
+            return ErrorString("ERR wrong number of arguments for 'keys' command");
+        }
+        
+        string pattern = command[1].ToUpperInvariant();
+
+        if (pattern != "*")
+        {
+            Console.WriteLine($"Unsupported keys pattern: {pattern}");
+        }
+        
+        return BulkStringArray(storage.GetAllKeys().ToArray());
     }
 
     private byte[] HandleConfig(List<string> command)

@@ -10,7 +10,7 @@ public interface IWorker
     Task HandleConnectionAsync(Socket socket);
 }
 
-public class TcpConnectionWorker(IStorage storage, IUserSettingsProvider userSettingsProvider): IWorker
+internal class TcpConnectionWorker(IStorage storage, IUserSettingsProvider userSettingsProvider): IWorker
 {
     public async Task HandleConnectionAsync(Socket socket)
     {

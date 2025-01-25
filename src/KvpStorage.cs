@@ -2,11 +2,9 @@ using System.Collections.Concurrent;
 
 namespace codecrafters_redis;
 
-public class KvpStorage : IStorage
+internal class KvpStorage : IStorage
 {
-    private record struct StorageValue(string Value, DateTime? ExpireAt = null);
-    
-    private readonly ConcurrentDictionary<string, StorageValue> _store = new();
+    private ConcurrentDictionary<string, StorageValue> _store = new();
 
     public void Set(string key, string value, int? expireAfterMs = null)
     {
@@ -20,4 +18,9 @@ public class KvpStorage : IStorage
         if (val == default || (val.ExpireAt ?? DateTime.MaxValue) < DateTime.Now) return null;
         return val.Value;
     }
+
+    public void Initialize(IDictionary<string, StorageValue> loadedData) =>
+        _store = new ConcurrentDictionary<string, StorageValue>(loadedData);
+
+    public IEnumerable<string> GetAllKeys() => _store.Keys;
 }

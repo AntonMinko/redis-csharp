@@ -5,6 +5,7 @@ namespace codecrafters_redis.UserSettings;
 
 public interface IUserSettingsProvider
 {
+    Task InitializeUserSettingsAsync();
     UserSettings GetUserSettings();
     Task SaveUserSettingsAsync(UserSettings userSettings);
 }
