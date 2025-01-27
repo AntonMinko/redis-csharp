@@ -1,3 +1,4 @@
+using System.Numerics;
 using static System.Text.Encoding;
 using static System.Console;
 
@@ -5,6 +6,8 @@ namespace codecrafters_redis.Persistence;
 
 internal class RdbParser
 {
+    private static DateTime Epoch = new(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
     internal async Task<DataModel> ParseAsync(string backupFile)
     {
         var dataModel = new DataModel();
@@ -87,26 +90,43 @@ internal class RdbParser
 
         var kvp = new Dictionary<string, StorageValue>();
         
-        var parsedSimpleKeys = await GetLengthEncodedIntAsync(stream, buffer);
+        var parsedTotalKeys = await GetLengthEncodedIntAsync(stream, buffer);
         var parsedKeysWithExpiration = await GetLengthEncodedIntAsync(stream, buffer);
-
-        for (int i = 0; i < parsedSimpleKeys.Value; i++)
+        
+        for (int i = 0; i < parsedTotalKeys.Value; i++)
         {
-            var valueTypeByte = (byte)stream.ReadByte();
-            string key = await ReadStringAsync(stream, buffer);
+            DateTime? expiresAt = null;
 
-            switch (valueTypeByte)
+            var valueTypeByte = (byte)stream.ReadByte();
+            if (valueTypeByte == 0xFC || valueTypeByte == 0xFD)
             {
-                case 0x00:
-                    string value = await ReadStringAsync(stream, buffer);
-                    kvp.Add(key, new StorageValue(value));
-                    break;
-                case 0xFC:
-                    //TODO
-                default:
-                    throw new NotImplementedException($"Unsupported content type {valueTypeByte}");
+                stream.Position -= 1;
+            
+                switch (valueTypeByte)
+                {
+                    case 0xFC:
+                        long milliseconds = await ParseLongAsync(stream, buffer);
+                        expiresAt = Epoch.AddMilliseconds(milliseconds);
+                        break;
+                    case 0xFD:
+                        int seconds = await ParseIntAsync(stream, buffer);
+                        expiresAt = Epoch.AddSeconds(seconds);
+                        break;
+                    default:
+                        throw new NotImplementedException($"Unexpected content. Expected 0xFC or 0xFD, but was {valueTypeByte}");
+                }
+            
+                valueTypeByte = (byte)stream.ReadByte();
             }
             
+            if (valueTypeByte != 0x00)
+            {
+                throw new InvalidDataException($"Unexpected content. Expected 0x00, but was {valueTypeByte}");
+            }
+            
+            string key = await ReadStringAsync(stream, buffer);
+            string value = await ReadStringAsync(stream, buffer);
+            kvp.Add(key, new StorageValue(value, expiresAt));
         }
 
         return kvp;
@@ -162,24 +182,33 @@ internal class RdbParser
     
     private async Task<int> ParseIntAsync(Stream stream, byte[] buffer)
     {
-        var encodingByte = stream.ReadByte();
-        switch (encodingByte)
-        {
-            case 0xC0:
-                return stream.ReadByte();
-            case 0xC1:
-                await stream.ReadExactlyAsync(buffer, 0, 2);
-                // convert from little-endian
-                return buffer[1] << 8 | buffer[0];
-            case 0xC2:
-                await stream.ReadExactlyAsync(buffer, 0, 4);
-                // convert from little-endian
-                return buffer[3] << 24 | buffer[2] << 16 | buffer[1] << 8 | buffer[0];
-            default:
-                throw new InvalidDataException("Stream does not contain integer value");
-        }
+        return (int) await ParseLongAsync(stream, buffer);
     }
 
+    private async Task<long> ParseLongAsync(Stream stream, byte[] buffer)
+    {
+        var encodingByte = stream.ReadByte();
+        int bytes = (encodingByte) switch
+        {
+            0xC0 => 1,
+            0xC1 => 2,
+            0xC2 => 4,
+            0xFD => 4,
+            0xFC => 8,
+            _ => throw new InvalidDataException("Stream does not contain integer value")
+        };
+        await stream.ReadExactlyAsync(buffer, 0, bytes);
+        
+        long result = 0;
+        int shift = 0;
+        for (int i = 0; i < bytes; i++)
+        {
+            long part = (long) buffer[i] << shift;
+            result |= part;
+            shift += 8;
+        }
+        return result;
+    }
 }
 
 internal record struct IntParseResult(int Value, bool IsStringLength);
