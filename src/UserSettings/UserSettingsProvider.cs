@@ -6,36 +6,38 @@ namespace codecrafters_redis.UserSettings;
 public interface IUserSettingsProvider
 {
     Task InitializeUserSettingsAsync();
-    UserSettings GetUserSettings();
-    Task SaveUserSettingsAsync(UserSettings userSettings);
+    Settings GetUserSettings();
+    Task SaveUserSettingsAsync(Settings settings);
 }
 
 public class UserSettingsProvider: IUserSettingsProvider
 {
-    private UserSettings? _userSettings = null;
+    private Settings? _userSettings;
     
-    public UserSettings GetUserSettings()
+    public Settings GetUserSettings()
     {
         return _userSettings!;
     }
     
     public async Task InitializeUserSettingsAsync()
     {
+        if (_userSettings != null) return;
+        
         try
         {
             var settingsFullName = ResolveSettingsFullName();
             WriteLine($"Settings file: {settingsFullName}");
             
             await using var stream = File.OpenRead(settingsFullName);
-            _userSettings = await JsonSerializer.DeserializeAsync<UserSettings>(stream) ?? UserSettings.Default;
+            _userSettings = await JsonSerializer.DeserializeAsync<Settings>(stream) ?? Settings.Default;
         }
         catch (Exception)
         {
-            _userSettings = UserSettings.Default;
+            _userSettings = Settings.Default;
         }
     }
 
-    public async Task SaveUserSettingsAsync(UserSettings? userSettings = null)
+    public async Task SaveUserSettingsAsync(Settings? userSettings = null)
     {
         if (userSettings != null)
         {
@@ -48,7 +50,7 @@ public class UserSettingsProvider: IUserSettingsProvider
 
     private string ResolveSettingsFullName()
     {
-        string appDataDir = UserSettings.GetAppDataDir();
+        string appDataDir = Settings.GetAppDataDir();
         if (!Directory.Exists(appDataDir))
         {
             Directory.CreateDirectory(appDataDir);

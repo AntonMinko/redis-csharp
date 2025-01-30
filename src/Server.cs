@@ -6,13 +6,13 @@ using static System.Console;
 
 namespace codecrafters_redis;
 
-public class Server(IServiceProvider serviceProvider, IUserSettingsProvider userSettingsProvider)
+public class Server(IServiceProvider serviceProvider, Settings settings)
 {
     internal async Task StartAndListen()
     {
         Console.WriteLine("Logs from your program will appear here!");
 
-        int port = userSettingsProvider.GetUserSettings().Runtime.Port;
+        int port = settings.Runtime.Port;
         TcpListener server = new TcpListener(IPAddress.Any, port);
         WriteLine($"Listening on port {port}");
 

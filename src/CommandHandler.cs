@@ -1,9 +1,10 @@
 using System.Text;
 using codecrafters_redis.UserSettings;
+using static System.Console;
 
 namespace codecrafters_redis;
 
-internal class CommandHandler(IStorage storage, IUserSettingsProvider userSettingsProvider)
+internal class CommandHandler(IStorage storage, Settings settings)
 {
     public byte[] Handle(List<string> command)
     {
@@ -21,10 +22,34 @@ internal class CommandHandler(IStorage storage, IUserSettingsProvider userSettin
                 return HandleConfig(command);
             case "KEYS":
                 return HandleKeys(command);
+            case "INFO":
+                return HandleInfo(command);
             default:
-                Console.WriteLine("Unknown command: " + String.Join(" ", command));
+                WriteLine("Unknown command: " + String.Join(" ", command));
                 return ErrorString($"Unknown command {command[0]}");
         }
+    }
+
+    private byte[] HandleInfo(List<string> command)
+    {
+        if (command.Count > 3)
+        {
+            return ErrorString("ERR wrong number of arguments for 'info' command");
+        }
+        
+        string section = command.Count >= 2 ? command[1].ToUpperInvariant() : "";
+
+        if (section != "" && section != "REPLICATION")
+        {
+            WriteLine($"Unsupported section: {section}");
+            return ErrorString($"Unknown info command section {section}");;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Replication");
+        sb.AppendLine($"role:{settings.Replication.Role.ToString().ToLowerInvariant()}");
+
+        return BulkString(sb.ToString());
     }
 
     private byte[] HandleKeys(List<string> command)
@@ -38,7 +63,7 @@ internal class CommandHandler(IStorage storage, IUserSettingsProvider userSettin
 
         if (pattern != "*")
         {
-            Console.WriteLine($"Unsupported keys pattern: {pattern}");
+            WriteLine($"Unsupported keys pattern: {pattern}");
         }
         
         return BulkStringArray(storage.GetAllKeys().ToArray());
@@ -60,8 +85,6 @@ internal class CommandHandler(IStorage storage, IUserSettingsProvider userSettin
         {
             return ErrorString("ERR wrong number of arguments for 'config|get' command");
         }
-
-        var settings = userSettingsProvider.GetUserSettings();
         
         switch (command[2].ToUpperInvariant())
         {

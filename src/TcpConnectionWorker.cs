@@ -10,7 +10,7 @@ public interface IWorker
     Task HandleConnectionAsync(Socket socket);
 }
 
-internal class TcpConnectionWorker(IStorage storage, IUserSettingsProvider userSettingsProvider): IWorker
+internal class TcpConnectionWorker(IStorage storage, Settings settings): IWorker
 {
     public async Task HandleConnectionAsync(Socket socket)
     {
@@ -30,7 +30,7 @@ internal class TcpConnectionWorker(IStorage storage, IUserSettingsProvider userS
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
 
                 var command = requestPayload.Parse();
-                var response = new CommandHandler(storage, userSettingsProvider).Handle(command);
+                var response = new CommandHandler(storage, settings).Handle(command);
 
                 await socket.SendAsync(response, SocketFlags.None);
             }
