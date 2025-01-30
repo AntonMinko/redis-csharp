@@ -1,16 +1,20 @@
 using System.Net;
 using System.Net.Sockets;
+using codecrafters_redis.UserSettings;
 using Microsoft.Extensions.DependencyInjection;
+using static System.Console;
 
 namespace codecrafters_redis;
 
-public class Server(IServiceProvider serviceProvider)
+public class Server(IServiceProvider serviceProvider, IUserSettingsProvider userSettingsProvider)
 {
     internal async Task StartAndListen()
     {
         Console.WriteLine("Logs from your program will appear here!");
 
-        TcpListener server = new TcpListener(IPAddress.Any, 6379);
+        int port = userSettingsProvider.GetUserSettings().Runtime.Port;
+        TcpListener server = new TcpListener(IPAddress.Any, port);
+        WriteLine($"Listening on port {port}");
 
         while (true)
         {
@@ -18,7 +22,7 @@ public class Server(IServiceProvider serviceProvider)
             {
                 server.Start(10);
                 var socket = await server.AcceptSocketAsync(); // wait for client
-                Console.WriteLine("Connected new client!");
+                WriteLine("Connected new client!");
                 
                 var worker = serviceProvider.GetRequiredService<IWorker>();
 

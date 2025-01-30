@@ -22,6 +22,11 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
             userSettings.Persistence.DbFileName = kvp["--dbfilename"];
             await userSettingsProvider.SaveUserSettingsAsync(userSettings);
         }
+
+        if (kvp.ContainsKey("--port"))
+        {
+            userSettings.Runtime.Port = int.Parse(kvp["--port"]);
+        }
         
         var dir = userSettings.Persistence.Dir;
         var dbFileName = userSettings.Persistence.DbFileName;
