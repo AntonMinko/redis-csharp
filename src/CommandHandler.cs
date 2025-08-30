@@ -1,6 +1,7 @@
 using System.Text;
 using codecrafters_redis.UserSettings;
 using static System.Console;
+using static codecrafters_redis.Helpers.RedisTypes;
 
 namespace codecrafters_redis;
 
@@ -11,9 +12,9 @@ internal class CommandHandler(IStorage storage, Settings settings)
         switch (command[0].ToUpperInvariant())
         {
             case "PING":
-                return SimpleString("PONG");
+                return "PONG".ToSimpleString();
             case "ECHO":
-                return SimpleString(command[1]);
+                return command[1].ToSimpleString();
             case "GET":
                 return HandleGet(command);
             case "SET":
@@ -26,7 +27,7 @@ internal class CommandHandler(IStorage storage, Settings settings)
                 return HandleInfo(command);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
-                return ErrorString($"Unknown command {command[0]}");
+                return $"Unknown command {command[0]}".ToErrorString();
         }
     }
 
@@ -34,7 +35,7 @@ internal class CommandHandler(IStorage storage, Settings settings)
     {
         if (command.Count > 3)
         {
-            return ErrorString("ERR wrong number of arguments for 'info' command");
+            return "ERR wrong number of arguments for 'info' command".ToErrorString();
         }
         
         string section = command.Count >= 2 ? command[1].ToUpperInvariant() : "";
@@ -42,7 +43,7 @@ internal class CommandHandler(IStorage storage, Settings settings)
         if (section != "" && section != "REPLICATION")
         {
             WriteLine($"Unsupported section: {section}");
-            return ErrorString($"Unknown info command section {section}");;
+            return $"Unknown info command section {section}".ToErrorString();
         }
 
         var sb = new StringBuilder();
@@ -59,14 +60,14 @@ internal class CommandHandler(IStorage storage, Settings settings)
             sb.AppendLine($"master_repl_offset:{settings.Replication.MasterReplicaSettings.MasterReplOffset}");
         }
 
-        return BulkString(sb.ToString());
+        return sb.ToString().ToBulkString();
     }
 
     private byte[] HandleKeys(List<string> command)
     {
         if (command.Count == 1 || command.Count > 3)
         {
-            return ErrorString("ERR wrong number of arguments for 'keys' command");
+            return "ERR wrong number of arguments for 'keys' command".ToErrorString();
         }
         
         string pattern = command[1].ToUpperInvariant();
@@ -76,40 +77,40 @@ internal class CommandHandler(IStorage storage, Settings settings)
             WriteLine($"Unsupported keys pattern: {pattern}");
         }
         
-        return BulkStringArray(storage.GetAllKeys().ToArray());
+        return storage.GetAllKeys().ToArray().ToBulkStringArray();
     }
 
     private byte[] HandleConfig(List<string> command)
     {
         if (command.Count == 1 || command.Count > 3)
         {
-            return ErrorString("ERR wrong number of arguments for 'config' command");
+            return "ERR wrong number of arguments for 'config' command".ToErrorString();
         }
 
         if (command[1].ToUpperInvariant() != "GET")
         {
-            return ErrorString($"ERR unknown subcommand '{command[1]}'");
+            return $"ERR unknown subcommand '{command[1]}'".ToErrorString();
         }
         
         if (command.Count == 2)
         {
-            return ErrorString("ERR wrong number of arguments for 'config|get' command");
+            return "ERR wrong number of arguments for 'config|get' command".ToErrorString();
         }
         
         switch (command[2].ToUpperInvariant())
         {
             case "DIR":
-                return BulkStringArray(["dir", settings.Persistence.Dir]);
+                return new[] {"dir", settings.Persistence.Dir}.ToBulkStringArray();
             case "DBFILENAME":
-                return BulkStringArray(["dbfilename", settings.Persistence.DbFileName]);
+                return new[] {"dbfilename", settings.Persistence.DbFileName}.ToBulkStringArray();
             default:
-                return BulkStringArray(null);
+                return NullBulkStringArray;
         }
     }
 
     private byte[] HandleSet(List<string> command)
     {
-        if (command.Count < 3) return ErrorString("ERR wrong number of arguments for 'set' command");
+        if (command.Count < 3) return "ERR wrong number of arguments for 'set' command".ToErrorString();
         
         var key = command[1];
         var value = command[2];
@@ -123,49 +124,14 @@ internal class CommandHandler(IStorage storage, Settings settings)
         }
         
         storage.Set(key, value, expiresAfterMs);
-        return OkString();
+        return OkString;
     }
 
     private byte[] HandleGet(List<string> command)
     {
-        if (command.Count < 2) return BulkString(null);
+        if (command.Count < 2) return NullBulkString;
         
         var key = command[1];
-        return BulkString(storage.Get(key));
-    }
-
-    private byte[] SimpleString(string s)
-    {
-        return Encoding.UTF8.GetBytes($"+{s}\r\n");
-    }
-
-    private byte[] ErrorString(string message)
-    {
-        return Encoding.UTF8.GetBytes($"-{message}\r\n");
-    }
-
-    private byte[] BulkString(string? s) => Encoding.UTF8.GetBytes(s == null ? "$-1\r\n" : BulkStringContent(s));
-
-    private static string BulkStringContent(string s) => $"${s.Length}\r\n{s}\r\n";
-
-    private byte[] BulkStringArray(string[]? strings)
-    {
-        if (strings == null) return Encoding.UTF8.GetBytes("*-1\r\n");
-        if (strings.Length == 0) return Encoding.UTF8.GetBytes("*0\r\n");
-        
-        var sb = new StringBuilder();
-        sb.Append('*');
-        sb.Append(strings.Length);
-        sb.Append("\r\n");
-        foreach (var s in strings)
-        {
-            sb.Append(BulkStringContent(s));
-        }
-        return Encoding.UTF8.GetBytes(sb.ToString());
-    }
-
-    private byte[] OkString()
-    {
-        return Encoding.UTF8.GetBytes("+OK\r\n");
+        return storage.Get(key).ToBulkString();
     }
 }
