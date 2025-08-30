@@ -11,26 +11,55 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
         var userSettings = userSettingsProvider.GetUserSettings();
 
         var kvp = ParseArgs(args);
-        if (kvp.ContainsKey("--dir"))
-        {
-            userSettings.Persistence.Dir = kvp["--dir"];
-            await userSettingsProvider.SaveUserSettingsAsync(userSettings);
-        }
-
-        if (kvp.ContainsKey("--dbfilename"))
-        {
-            userSettings.Persistence.DbFileName = kvp["--dbfilename"];
-            await userSettingsProvider.SaveUserSettingsAsync(userSettings);
-        }
-
-        if (kvp.ContainsKey("--port"))
-        {
-            userSettings.Runtime.Port = int.Parse(kvp["--port"]);
-        }
+        await HandleDirSetting(kvp, userSettings);
+        await HandleDbFilenameSetting(kvp, userSettings);
+        await HandlePortSetting(kvp, userSettings);
+        await HandleReplicaOfSetting(kvp, userSettings);
         
-        var dir = userSettings.Persistence.Dir;
-        var dbFileName = userSettings.Persistence.DbFileName;
-        await LoadFromBackupFile(dir, dbFileName);
+        await LoadFromBackupFile(userSettings.Persistence.Dir, userSettings.Persistence.DbFileName);
+    }
+
+    private async Task HandleReplicaOfSetting(Dictionary<string, string> kvp, Settings userSettings)
+    {
+        if (!kvp.TryGetValue("--replicaof", out var replicaOf)) return;
+
+        try
+        {
+            var parts = replicaOf.Split(' ');
+            var masterHost = parts[0];
+            var masterPort = int.Parse(parts[1]);
+
+            userSettings.Replication.Role = ReplicationRole.Slave;
+            userSettings.Replication.ReplicaOf = new ReplicaOfSettings {MasterHost = masterHost, MasterPort = masterPort};
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($" Unable to parse --replicaOf value: {e}");
+
+            userSettings.Replication.Role = ReplicationRole.Master;
+        }
+    }
+
+    private static async Task HandlePortSetting(Dictionary<string, string> kvp, Settings userSettings)
+    {
+        if (!kvp.TryGetValue("--port", out var port)) return;
+        userSettings.Runtime.Port = int.Parse(port);
+    }
+
+    private async Task HandleDbFilenameSetting(Dictionary<string, string> kvp, Settings userSettings)
+    {
+        if (!kvp.TryGetValue("--dbfilename", out var dbFilename)) return;
+
+        userSettings.Persistence.DbFileName = dbFilename;
+        await userSettingsProvider.SaveUserSettingsAsync(userSettings);
+    }
+
+    private async Task HandleDirSetting(Dictionary<string, string> kvp, Settings userSettings)
+    {
+        if (!kvp.TryGetValue("--dir", out var dir)) return;
+        
+        userSettings.Persistence.Dir = dir;
+        await userSettingsProvider.SaveUserSettingsAsync(userSettings);
     }
 
     private async Task LoadFromBackupFile(string dir, string dbFileName)
