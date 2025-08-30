@@ -1,3 +1,4 @@
+using codecrafters_redis.Helpers;
 using codecrafters_redis.Persistence;
 using codecrafters_redis.UserSettings;
 
@@ -14,29 +15,40 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
         await HandleDirSetting(kvp, userSettings);
         await HandleDbFilenameSetting(kvp, userSettings);
         await HandlePortSetting(kvp, userSettings);
-        await HandleReplicaOfSetting(kvp, userSettings);
+        await HandleReplicaSettings(kvp, userSettings);
         
         await LoadFromBackupFile(userSettings.Persistence.Dir, userSettings.Persistence.DbFileName);
     }
 
-    private async Task HandleReplicaOfSetting(Dictionary<string, string> kvp, Settings userSettings)
+    private async Task HandleReplicaSettings(Dictionary<string, string> kvp, Settings userSettings)
     {
-        if (!kvp.TryGetValue("--replicaof", out var replicaOf)) return;
-
-        try
+        if (kvp.TryGetValue("--replicaof", out var replicaOf))
         {
-            var parts = replicaOf.Split(' ');
-            var masterHost = parts[0];
-            var masterPort = int.Parse(parts[1]);
+            try
+            {
+                var parts = replicaOf.Split(' ');
+                var masterHost = parts[0];
+                var masterPort = int.Parse(parts[1]);
 
-            userSettings.Replication.Role = ReplicationRole.Slave;
-            userSettings.Replication.ReplicaOf = new ReplicaOfSettings {MasterHost = masterHost, MasterPort = masterPort};
+                userSettings.Replication.Role = ReplicationRole.Slave;
+                userSettings.Replication.SlaveReplicaSettings = new SlaveReplicaSettings
+                    { MasterHost = masterHost, MasterPort = masterPort };
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($" Unable to parse --replicaOf value: {e}");
+
+                userSettings.Replication.Role = ReplicationRole.Master;
+            }
         }
-        catch (Exception e)
-        {
-            Console.WriteLine($" Unable to parse --replicaOf value: {e}");
 
-            userSettings.Replication.Role = ReplicationRole.Master;
+        if (userSettings.Replication.Role == ReplicationRole.Master)
+        {
+            userSettings.Replication.MasterReplicaSettings = new MasterReplicaSettings
+            {
+                MasterReplId = StringHelpers.GenerateRandomString(40),
+                MasterReplOffset = 0
+            };
         }
     }
 

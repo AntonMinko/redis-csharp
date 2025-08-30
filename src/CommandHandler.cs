@@ -48,10 +48,15 @@ internal class CommandHandler(IStorage storage, Settings settings)
         var sb = new StringBuilder();
         sb.AppendLine("# Replication");
         sb.AppendLine($"role:{settings.Replication.Role.ToString().ToLowerInvariant()}");
-        if (settings.Replication.ReplicaOf != null)
+        if (settings.Replication.SlaveReplicaSettings != null)
         {
-            sb.AppendLine($"master_host:{settings.Replication.ReplicaOf.MasterHost}");
-            sb.AppendLine($"master_port:{settings.Replication.ReplicaOf.MasterPort}");
+            sb.AppendLine($"master_host:{settings.Replication.SlaveReplicaSettings.MasterHost}");
+            sb.AppendLine($"master_port:{settings.Replication.SlaveReplicaSettings.MasterPort}");
+        }
+        if (settings.Replication.MasterReplicaSettings != null)
+        {
+            sb.AppendLine($"master_replid:{settings.Replication.MasterReplicaSettings.MasterReplId}");
+            sb.AppendLine($"master_repl_offset:{settings.Replication.MasterReplicaSettings.MasterReplOffset}");
         }
 
         return BulkString(sb.ToString());

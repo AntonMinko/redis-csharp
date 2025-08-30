@@ -43,13 +43,20 @@ public class RuntimeSettings
 public class ReplicationSettings
 {
     public required ReplicationRole Role { get; set; }
-    public ReplicaOfSettings? ReplicaOf { get; set; }
+    public MasterReplicaSettings? MasterReplicaSettings { get; set; }
+    public SlaveReplicaSettings? SlaveReplicaSettings { get; set; }
 }
 
-public class ReplicaOfSettings
+public class SlaveReplicaSettings
 {
     public required string MasterHost { get; set; }
     public required int MasterPort { get; set; }
+}
+
+public class MasterReplicaSettings
+{
+    public required string MasterReplId { get; set; }
+    public required int MasterReplOffset { get; set; }
 }
 
 public enum ReplicationRole
