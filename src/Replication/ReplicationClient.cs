@@ -18,14 +18,19 @@ public class ReplicationClient(Settings settings)
         Console.WriteLine($"Ping response: {response}");
     }
 
-    public async Task SendListeningPort(int port)
+    public async Task ConfListeningPort(int port)
     {
         await SendWithConfirmationCommand(new[] {"REPLCONF", "listening-port", port.ToString()}.ToBulkStringArray());
     }
 
-    public async Task SendCapabilities()
+    public async Task ConfCapabilities()
     {
         await SendWithConfirmationCommand(new[] {"REPLCONF", "capa", "psync2"}.ToBulkStringArray());
+    }
+
+    public async Task<string> PSync(string masterReplicationId, int offset)
+    {
+        return await SendAndReceiveCommand(new[] {"PSYNC", masterReplicationId, offset.ToString()}.ToBulkStringArray());
     }
 
     private async Task<string> SendAndReceiveCommand(byte[] message)

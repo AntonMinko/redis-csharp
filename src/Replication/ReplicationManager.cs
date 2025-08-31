@@ -13,8 +13,9 @@ public class ReplicationManager(Settings settings)
         {
             _replicationClient = new ReplicationClient(settings);
             await _replicationClient.Ping();
-            await _replicationClient.SendListeningPort(settings.Runtime.Port);
-            await _replicationClient.SendCapabilities();
+            await _replicationClient.ConfListeningPort(settings.Runtime.Port);
+            await _replicationClient.ConfCapabilities();
+            var masterSettings = await _replicationClient.PSync("?", -1);
         }
         catch (Exception e)
         {
