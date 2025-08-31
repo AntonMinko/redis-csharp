@@ -4,7 +4,8 @@ namespace codecrafters_redis.Helpers;
 
 public static class RedisTypes
 {
-    public static readonly byte[] OkString = Encoding.UTF8.GetBytes("+OK\r\n");
+    public const string OkString = "+OK\r\n";
+    public static readonly byte[] OkBytes = Encoding.UTF8.GetBytes(OkString);
     public static readonly byte[] NullBulkString = Encoding.UTF8.GetBytes("$-1\r\n");
     public static readonly byte[] NullBulkStringArray = Encoding.UTF8.GetBytes("*-1\r\n");
     public static readonly byte[] EmptyBulkStringArray = Encoding.UTF8.GetBytes("*0\r\n");

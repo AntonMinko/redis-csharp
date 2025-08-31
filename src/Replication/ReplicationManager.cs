@@ -13,6 +13,8 @@ public class ReplicationManager(Settings settings)
         {
             _replicationClient = new ReplicationClient(settings);
             await _replicationClient.Ping();
+            await _replicationClient.SendListeningPort(settings.Runtime.Port);
+            await _replicationClient.SendCapabilities();
         }
         catch (Exception e)
         {

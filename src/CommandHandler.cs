@@ -124,7 +124,7 @@ internal class CommandHandler(IStorage storage, Settings settings)
         }
         
         storage.Set(key, value, expiresAfterMs);
-        return OkString;
+        return OkBytes;
     }
 
     private byte[] HandleGet(List<string> command)
