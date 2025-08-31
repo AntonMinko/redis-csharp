@@ -27,10 +27,19 @@ internal class CommandHandler(IStorage storage, Settings settings)
                 return HandleInfo(command);
             case "REPLCONF":
                 return HandlePerfConf(command);
+            case "PSYNC":
+                return HandlePSync(command);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
         }
+    }
+
+    private byte[] HandlePSync(List<string> command)
+    {
+        if (settings.Replication.Role != ReplicationRole.Master) return "ERR Only master can handle PSYNC commands".ToErrorString();
+        
+        return $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
     }
 
     private byte[] HandlePerfConf(List<string> command)
