@@ -25,10 +25,17 @@ internal class CommandHandler(IStorage storage, Settings settings)
                 return HandleKeys(command);
             case "INFO":
                 return HandleInfo(command);
+            case "REPLCONF":
+                return HandlePerfConf(command);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
         }
+    }
+
+    private byte[] HandlePerfConf(List<string> command)
+    {
+        return OkBytes;
     }
 
     private byte[] HandleInfo(List<string> command)
