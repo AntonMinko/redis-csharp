@@ -6,9 +6,8 @@ using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis.Replication;
 
-public class ReplicationClient(Settings settings)
+public class ReplicaClient(Settings settings)
 {
-    private readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
     private readonly byte[] _buffer = new byte[1024];
     private readonly TcpClient _connection = new(settings.Replication.SlaveReplicaSettings!.MasterHost, settings.Replication.SlaveReplicaSettings.MasterPort);
 
@@ -36,13 +35,11 @@ public class ReplicationClient(Settings settings)
     private async Task<string> SendAndReceiveCommand(byte[] message)
     {
         if (!_connection.Connected) throw new ChannelClosedException();
+
+        await _connection.Client.SendAsync(message);
         
-        var stream = _connection.GetStream();
-        await stream.WriteAsync(message);
-        
-        using var cts = new CancellationTokenSource(_timeout);
         _buffer.Initialize();
-        int received = await stream.ReadAsync(_buffer, cts.Token);
+        int received = await _connection.Client.ReceiveAsync(_buffer);
         var payload = Encoding.UTF8.GetString(_buffer, 0, received);
         return payload;
     }

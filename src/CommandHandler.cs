@@ -1,16 +1,16 @@
-using System.Buffers.Text;
+using System.Net.Sockets;
 using System.Text;
-using System.Text.Unicode;
 using codecrafters_redis.Helpers;
+using codecrafters_redis.Replication;
 using codecrafters_redis.UserSettings;
 using static System.Console;
 using static codecrafters_redis.Helpers.RedisTypes;
 
 namespace codecrafters_redis;
 
-internal class CommandHandler(IStorage storage, Settings settings)
+internal class CommandHandler(IStorage storage, Settings settings, MasterManager masterManager)
 {
-    public byte[] Handle(List<string> command)
+    public byte[] Handle(string[] command, Socket socket)
     {
         switch (command[0].ToUpperInvariant())
         {
@@ -31,37 +31,37 @@ internal class CommandHandler(IStorage storage, Settings settings)
             case "REPLCONF":
                 return HandlePerfConf(command);
             case "PSYNC":
-                return HandlePSync(command);
+                return HandlePSync(command, socket);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
         }
     }
 
-    private byte[] HandlePSync(List<string> command)
+    private byte[] HandlePSync(string[] command, Socket socket)
     {
         if (settings.Replication.Role != ReplicationRole.Master) return "ERR Only master can handle PSYNC commands".ToErrorString();
+        Console.WriteLine("Handle PSync");
         
-        var fullresync = $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
+        var fullResync = $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
         
-        const string emptyRdbFile = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
-        byte[] emptyRdbFileBytes = Convert.FromBase64String(emptyRdbFile).ToBinaryContent();
-        return fullresync.Concat(emptyRdbFileBytes);
+        masterManager.InitReplicaConnection(socket, fullResync);
+        return [];
     }
 
-    private byte[] HandlePerfConf(List<string> command)
+    private byte[] HandlePerfConf(string[] command)
     {
         return OkBytes;
     }
 
-    private byte[] HandleInfo(List<string> command)
+    private byte[] HandleInfo(string[] command)
     {
-        if (command.Count > 3)
+        if (command.Length > 3)
         {
             return "ERR wrong number of arguments for 'info' command".ToErrorString();
         }
         
-        string section = command.Count >= 2 ? command[1].ToUpperInvariant() : "";
+        string section = command.Length >= 2 ? command[1].ToUpperInvariant() : "";
 
         if (section != "" && section != "REPLICATION")
         {
@@ -86,9 +86,9 @@ internal class CommandHandler(IStorage storage, Settings settings)
         return sb.ToString().ToBulkString();
     }
 
-    private byte[] HandleKeys(List<string> command)
+    private byte[] HandleKeys(string[] command)
     {
-        if (command.Count == 1 || command.Count > 3)
+        if (command.Length == 1 || command.Length > 3)
         {
             return "ERR wrong number of arguments for 'keys' command".ToErrorString();
         }
@@ -103,9 +103,9 @@ internal class CommandHandler(IStorage storage, Settings settings)
         return storage.GetAllKeys().ToArray().ToBulkStringArray();
     }
 
-    private byte[] HandleConfig(List<string> command)
+    private byte[] HandleConfig(string[] command)
     {
-        if (command.Count == 1 || command.Count > 3)
+        if (command.Length == 1 || command.Length > 3)
         {
             return "ERR wrong number of arguments for 'config' command".ToErrorString();
         }
@@ -115,7 +115,7 @@ internal class CommandHandler(IStorage storage, Settings settings)
             return $"ERR unknown subcommand '{command[1]}'".ToErrorString();
         }
         
-        if (command.Count == 2)
+        if (command.Length == 2)
         {
             return "ERR wrong number of arguments for 'config|get' command".ToErrorString();
         }
@@ -131,14 +131,14 @@ internal class CommandHandler(IStorage storage, Settings settings)
         }
     }
 
-    private byte[] HandleSet(List<string> command)
+    private byte[] HandleSet(string[] command)
     {
-        if (command.Count < 3) return "ERR wrong number of arguments for 'set' command".ToErrorString();
+        if (command.Length < 3) return "ERR wrong number of arguments for 'set' command".ToErrorString();
         
         var key = command[1];
         var value = command[2];
         int? expiresAfterMs = null;
-        if (command.Count == 5 && command[3].ToUpperInvariant() == "PX")
+        if (command.Length == 5 && command[3].ToUpperInvariant() == "PX")
         {
             if (int.TryParse(command[4], out int ms))
             {
@@ -150,9 +150,9 @@ internal class CommandHandler(IStorage storage, Settings settings)
         return OkBytes;
     }
 
-    private byte[] HandleGet(List<string> command)
+    private byte[] HandleGet(string[] command)
     {
-        if (command.Count < 2) return NullBulkString;
+        if (command.Length < 2) return NullBulkString;
         
         var key = command[1];
         return storage.Get(key).ToBulkString();

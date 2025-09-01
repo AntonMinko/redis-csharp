@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Unicode;
+using codecrafters_redis.Replication;
 using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis;
@@ -10,7 +11,7 @@ public interface IWorker
     Task HandleConnectionAsync(Socket socket);
 }
 
-internal class TcpConnectionWorker(IStorage storage, Settings settings): IWorker
+internal class TcpConnectionWorker(CommandHandler commandHandler, MasterManager masterManager): IWorker
 {
     public async Task HandleConnectionAsync(Socket socket)
     {
@@ -19,7 +20,7 @@ internal class TcpConnectionWorker(IStorage storage, Settings settings): IWorker
             while (socket.Connected)
             {
                 var buffer = new byte[1024];
-                var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                var received = await socket.ReceiveAsync(buffer);
                 if (received == 0)
                 {
                     Console.WriteLine("Socket disconnected");
@@ -30,9 +31,15 @@ internal class TcpConnectionWorker(IStorage storage, Settings settings): IWorker
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
 
                 var command = requestPayload.Parse();
-                var response = new CommandHandler(storage, settings).Handle(command);
+                var response = commandHandler.Handle(command, socket);
+                Console.WriteLine($"Going to send response: {Encoding.UTF8.GetString(response, 0, response.Length)}");
 
-                await socket.SendAsync(response, SocketFlags.None);
+                await socket.SendAsync(response);
+                
+                if (response.FirstOrDefault() != '-')
+                {
+                    await masterManager.PropagateCommand(command);
+                }
             }
 
             socket.Close();

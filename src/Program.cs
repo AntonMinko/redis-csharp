@@ -12,15 +12,17 @@ var services = new ServiceCollection()
     .AddSingleton(userSettings)
     .AddSingleton<Server>()
     .AddSingleton<IStorage, KvpStorage>()
-    .AddSingleton<ReplicationManager>()
+    .AddSingleton<ReplicaManager>()
+    .AddSingleton<MasterManager>()
     .AddTransient<ServerInitializer>()
     .AddTransient<IWorker, TcpConnectionWorker>()
+    .AddTransient<CommandHandler>()
     .BuildServiceProvider();
 
 var initializer = services.GetRequiredService<ServerInitializer>();
 await initializer.Initialize(args);
 
-var replicationManager = services.GetRequiredService<ReplicationManager>();
+var replicationManager = services.GetRequiredService<ReplicaManager>();
 await replicationManager.ConnectToMaster();
 
 var redisServer = services.GetRequiredService<Server>();

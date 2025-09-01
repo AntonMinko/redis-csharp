@@ -2,7 +2,7 @@ namespace codecrafters_redis;
 
 public static class CommandParser
 {
-    public static List<string> Parse(this string command)
+    public static string[] Parse(this string command)
     {
         var result = new List<string>();
         var parts = command.Split("\r\n").Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
@@ -11,6 +11,6 @@ public static class CommandParser
             result.Add(parts[i]);
         }
         
-        return result;
+        return result.ToArray();
     }
 }

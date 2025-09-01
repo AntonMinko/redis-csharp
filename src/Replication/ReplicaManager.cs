@@ -2,16 +2,17 @@ using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis.Replication;
 
-public class ReplicationManager(Settings settings)
+public class ReplicaManager(Settings settings)
 {
-    private ReplicationClient? _replicationClient;
+    private ReplicaClient? _replicationClient;
     public async Task ConnectToMaster()
     {
         if (settings.Replication.SlaveReplicaSettings == null) return;
 
         try
         {
-            _replicationClient = new ReplicationClient(settings);
+            Console.WriteLine($"Connecting to master {settings.Replication.SlaveReplicaSettings.MasterHost}:{settings.Replication.SlaveReplicaSettings.MasterPort}");
+            _replicationClient = new ReplicaClient(settings);
             await _replicationClient.Ping();
             await _replicationClient.ConfListeningPort(settings.Runtime.Port);
             await _replicationClient.ConfCapabilities();
