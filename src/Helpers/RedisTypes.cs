@@ -36,6 +36,12 @@ public static class RedisTypes
         }
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
+
+    public static byte[] ToBinaryContent(this byte[] bytes)
+    {
+        var prefix = Encoding.UTF8.GetBytes($"${bytes.Length}\r\n");
+        return prefix.Concat(bytes);
+    }
     
     private static string ToBulkStringContent(this string s) => $"${s.Length}\r\n{s}\r\n";
 }

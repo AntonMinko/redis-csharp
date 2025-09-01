@@ -13,8 +13,7 @@ internal class RdbParser
         var dataModel = new DataModel();
         var buffer = new byte[1024];
         
-        using var fileStream = new FileStream(backupFile, FileMode.Open);
-        //using var reader = new StreamReader(fileStream);
+        await using var fileStream = new FileStream(backupFile, FileMode.Open);
         
         await ParseHeaderAsync(fileStream, buffer, dataModel);
         await ParseMetadataAsync(fileStream, buffer, dataModel);

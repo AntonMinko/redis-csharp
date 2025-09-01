@@ -1,4 +1,7 @@
+using System.Buffers.Text;
 using System.Text;
+using System.Text.Unicode;
+using codecrafters_redis.Helpers;
 using codecrafters_redis.UserSettings;
 using static System.Console;
 using static codecrafters_redis.Helpers.RedisTypes;
@@ -39,7 +42,11 @@ internal class CommandHandler(IStorage storage, Settings settings)
     {
         if (settings.Replication.Role != ReplicationRole.Master) return "ERR Only master can handle PSYNC commands".ToErrorString();
         
-        return $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
+        var fullresync = $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
+        
+        const string emptyRdbFile = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+        byte[] emptyRdbFileBytes = Convert.FromBase64String(emptyRdbFile).ToBinaryContent();
+        return fullresync.Concat(emptyRdbFileBytes);
     }
 
     private byte[] HandlePerfConf(List<string> command)
