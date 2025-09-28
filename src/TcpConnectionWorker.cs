@@ -1,8 +1,5 @@
 using System.Net.Sockets;
 using System.Text;
-using System.Text.Unicode;
-using codecrafters_redis.Replication;
-using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis;
 
@@ -11,7 +8,7 @@ public interface IWorker
     Task HandleConnectionAsync(Socket socket);
 }
 
-internal class TcpConnectionWorker(CommandHandler commandHandler, MasterManager masterManager): IWorker
+internal class TcpConnectionWorker(CommandHandler commandHandler, Settings settings, MasterManager masterManager): IWorker
 {
     public async Task HandleConnectionAsync(Socket socket)
     {
@@ -19,35 +16,58 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, MasterManager 
         {
             while (socket.Connected)
             {
+                WriteLine("Waiting for request...");
                 var buffer = new byte[1024];
-                var received = await socket.ReceiveAsync(buffer);
+                var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
                 if (received == 0)
                 {
-                    Console.WriteLine("Socket disconnected");
+                    WriteLine("Socket disconnected");
                     break;
                 }
 
                 var requestPayload = Encoding.UTF8.GetString(buffer, 0, received);
-                Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
+                WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
 
                 var command = requestPayload.Parse();
-                var response = commandHandler.Handle(command, socket);
-                Console.WriteLine($"Going to send response: {Encoding.UTF8.GetString(response, 0, response.Length)}");
+                var response = HandleCommand(socket, command);
 
-                await socket.SendAsync(response);
+                var value = response.Value;
+                WriteLine($"Going to send response: {Encoding.UTF8.GetString(value, 0, value.Length)}");
+
+                await socket.SendAsync(value);
                 
-                if (response.FirstOrDefault() != '-')
+                if (response.Success)
                 {
-                    await masterManager.PropagateCommand(command);
+                    masterManager.PropagateCommand(command);
                 }
             }
 
             socket.Close();
-            Console.WriteLine("Connection closed");
+            WriteLine("Connection closed");
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            WriteLine(e);
         }
+    }
+
+    private RedisValue HandleCommand(Socket socket, string[] command)
+    {
+        if (command[0].ToUpperInvariant() == "PSYNC")
+        {
+            if (settings.Replication.Role != ReplicationRole.Master)
+                return "ERR Only master can handle PSYNC commands".ToErrorString();
+            
+            WriteLine("Handle PSync");
+            var masterReplId = settings.Replication.MasterReplicaSettings!.MasterReplId;
+            var masterReplOffset = settings.Replication.MasterReplicaSettings.MasterReplOffset;
+            var fullResync = $"FULLRESYNC {masterReplId} {masterReplOffset}".ToSimpleString();
+            
+            masterManager.InitReplicaConnection(socket, fullResync);
+            
+            return RedisValue.EmptyResponse;
+        }
+
+        return commandHandler.Handle(command);
     }
 }

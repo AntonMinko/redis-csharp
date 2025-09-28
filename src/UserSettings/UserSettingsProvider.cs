@@ -1,5 +1,4 @@
 using System.Text.Json;
-using static System.Console;
 
 namespace codecrafters_redis.UserSettings;
 

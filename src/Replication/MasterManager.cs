@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using codecrafters_redis.Helpers;
 
 namespace codecrafters_redis.Replication;
 
@@ -9,26 +8,34 @@ public class MasterManager
 
     private Socket? _replicaSocket;
     
-    public void InitReplicaConnection(Socket socket, byte[] pSyncResponse)
+    public void InitReplicaConnection(Socket socket, RedisValue pSyncResponse)
     {
         _replicaSocket = socket;
         
-        byte[] emptyRdbFileBytes = Convert.FromBase64String(EmptyRdbFile).ToBinaryContent();
-        _replicaSocket.Send(pSyncResponse);
-        _replicaSocket.Send(emptyRdbFileBytes);
+        var emptyRdbFileBytes = Convert.FromBase64String(EmptyRdbFile).ToBinaryContent();
+        _replicaSocket.Send(pSyncResponse.Value);
+        _replicaSocket.Send(emptyRdbFileBytes.Value);
     }
 
-    public async Task PropagateCommand(string[] command)
+    public void PropagateCommand(string[] command)
     {
         if (_replicaSocket == null || _replicaSocket.Connected == false) return;
-        
-        switch (command[0].ToUpperInvariant())
+
+        var commandType = command[0].ToUpperInvariant();
+        switch (commandType)
         {
             case "SET":
-                await _replicaSocket.SendAsync(command.ToBulkStringArray());
+                WriteLine($"Sending {commandType} command to replica");
+                SendAsync(command);
                 break;
             default:
-                return;
+                WriteLine($"Command {commandType} shouldn't be replicated");
+                break;
         }
+    }
+    
+    private void SendAsync(string[] command)
+    {
+        _replicaSocket?.SendAsync(command.ToBulkStringArray().Value);
     }
 }

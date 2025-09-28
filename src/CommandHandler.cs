@@ -1,16 +1,10 @@
-using System.Net.Sockets;
 using System.Text;
-using codecrafters_redis.Helpers;
-using codecrafters_redis.Replication;
-using codecrafters_redis.UserSettings;
-using static System.Console;
-using static codecrafters_redis.Helpers.RedisTypes;
 
 namespace codecrafters_redis;
 
-internal class CommandHandler(IStorage storage, Settings settings, MasterManager masterManager)
+internal class CommandHandler(IStorage storage, Settings settings)
 {
-    public byte[] Handle(string[] command, Socket socket)
+    public RedisValue Handle(string[] command)
     {
         switch (command[0].ToUpperInvariant())
         {
@@ -30,31 +24,18 @@ internal class CommandHandler(IStorage storage, Settings settings, MasterManager
                 return HandleInfo(command);
             case "REPLCONF":
                 return HandlePerfConf(command);
-            case "PSYNC":
-                return HandlePSync(command, socket);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
         }
     }
 
-    private byte[] HandlePSync(string[] command, Socket socket)
-    {
-        if (settings.Replication.Role != ReplicationRole.Master) return "ERR Only master can handle PSYNC commands".ToErrorString();
-        Console.WriteLine("Handle PSync");
-        
-        var fullResync = $"FULLRESYNC {settings.Replication.MasterReplicaSettings!.MasterReplId} {settings.Replication.MasterReplicaSettings.MasterReplOffset}".ToSimpleString();
-        
-        masterManager.InitReplicaConnection(socket, fullResync);
-        return [];
-    }
-
-    private byte[] HandlePerfConf(string[] command)
+    private RedisValue HandlePerfConf(string[] command)
     {
         return OkBytes;
     }
 
-    private byte[] HandleInfo(string[] command)
+    private RedisValue HandleInfo(string[] command)
     {
         if (command.Length > 3)
         {
@@ -86,7 +67,7 @@ internal class CommandHandler(IStorage storage, Settings settings, MasterManager
         return sb.ToString().ToBulkString();
     }
 
-    private byte[] HandleKeys(string[] command)
+    private RedisValue HandleKeys(string[] command)
     {
         if (command.Length == 1 || command.Length > 3)
         {
@@ -103,7 +84,7 @@ internal class CommandHandler(IStorage storage, Settings settings, MasterManager
         return storage.GetAllKeys().ToArray().ToBulkStringArray();
     }
 
-    private byte[] HandleConfig(string[] command)
+    private RedisValue HandleConfig(string[] command)
     {
         if (command.Length == 1 || command.Length > 3)
         {
@@ -131,7 +112,7 @@ internal class CommandHandler(IStorage storage, Settings settings, MasterManager
         }
     }
 
-    private byte[] HandleSet(string[] command)
+    private RedisValue HandleSet(string[] command)
     {
         if (command.Length < 3) return "ERR wrong number of arguments for 'set' command".ToErrorString();
         
@@ -150,7 +131,7 @@ internal class CommandHandler(IStorage storage, Settings settings, MasterManager
         return OkBytes;
     }
 
-    private byte[] HandleGet(string[] command)
+    private RedisValue HandleGet(string[] command)
     {
         if (command.Length < 2) return NullBulkString;
         

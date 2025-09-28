@@ -1,6 +1,4 @@
-using codecrafters_redis.Helpers;
 using codecrafters_redis.Persistence;
-using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis;
 
@@ -36,7 +34,7 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
             }
             catch (Exception e)
             {
-                Console.WriteLine($" Unable to parse --replicaOf value: {e}");
+                WriteLine($" Unable to parse --replicaOf value: {e}");
 
                 userSettings.Replication.Role = ReplicationRole.Master;
             }
@@ -88,11 +86,11 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
             var loadedData = dataModel.Databases[0];
             storage.Initialize(loadedData);
 
-            Console.WriteLine($"Loaded {loadedData.Count} records");
+            WriteLine($"Loaded {loadedData.Count} records");
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            WriteLine(e);
         }
     }
 

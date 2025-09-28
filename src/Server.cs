@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
-using codecrafters_redis.UserSettings;
 using Microsoft.Extensions.DependencyInjection;
-using static System.Console;
 
 namespace codecrafters_redis;
 

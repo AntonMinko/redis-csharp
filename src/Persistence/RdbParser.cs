@@ -1,6 +1,4 @@
-using System.Numerics;
 using static System.Text.Encoding;
-using static System.Console;
 
 namespace codecrafters_redis.Persistence;
 

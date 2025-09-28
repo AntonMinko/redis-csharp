@@ -1,8 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
-using codecrafters_redis.Helpers;
-using codecrafters_redis.UserSettings;
 
 namespace codecrafters_redis.Replication;
 
@@ -14,7 +12,7 @@ public class ReplicaClient(Settings settings)
     public async Task Ping()
     {
         var response = await SendAndReceiveCommand(new[] { "PING" }.ToBulkStringArray());
-        Console.WriteLine($"Ping response: {response}");
+        WriteLine($"Ping response: {response}");
     }
 
     public async Task ConfListeningPort(int port)
@@ -32,19 +30,42 @@ public class ReplicaClient(Settings settings)
         return await SendAndReceiveCommand(new[] {"PSYNC", masterReplicationId, offset.ToString()}.ToBulkStringArray());
     }
 
-    private async Task<string> SendAndReceiveCommand(byte[] message)
+    public async IAsyncEnumerable<string> WaitForCommandsAsync()
+    {
+        while (_connection.Connected)
+        {
+            WriteLine("Waiting for commands from the master...");
+            var buffer = new byte[1024];
+            var received = await _connection.Client.ReceiveAsync(buffer, SocketFlags.None);
+            if (received == 0)
+            {
+                WriteLine("Connection with the master disconnected");
+                break;
+            }
+
+            var requestPayload = Encoding.UTF8.GetString(buffer, 0, received);
+            WriteLine($"Received command from the master: {requestPayload}");
+            yield return requestPayload;
+        }
+
+        _connection.Close();
+        WriteLine("Connection with the master closed");
+    }
+
+    private async Task<string> SendAndReceiveCommand(RedisValue message)
     {
         if (!_connection.Connected) throw new ChannelClosedException();
 
-        await _connection.Client.SendAsync(message);
+        await _connection.Client.SendAsync(message.Value);
         
         _buffer.Initialize();
         int received = await _connection.Client.ReceiveAsync(_buffer);
         var payload = Encoding.UTF8.GetString(_buffer, 0, received);
+        WriteLine($"Received from master: {payload}");
         return payload;
     }
 
-    private async Task SendWithConfirmationCommand(byte[] message, string confirmation = RedisTypes.OkString)
+    private async Task SendWithConfirmationCommand(RedisValue message, string confirmation = RedisTypesExtensions.OkString)
     {
         try
         {
@@ -56,7 +77,7 @@ public class ReplicaClient(Settings settings)
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            WriteLine(e);
             throw new IOException($"Failed to send a message with confirmation: {e}");
         }
     }

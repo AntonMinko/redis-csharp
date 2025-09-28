@@ -1,6 +1,3 @@
-using codecrafters_redis;
-using codecrafters_redis.Replication;
-using codecrafters_redis.UserSettings;
 using Microsoft.Extensions.DependencyInjection;
 
 var userSettingsProvider = new UserSettingsProvider();
