@@ -32,23 +32,6 @@ public class Server(IServiceProvider serviceProvider, Settings settings)
             WriteLine($"Stopping server");
             server.Stop();
         }
-while (true)
-{
-    try
-    {
-        server.Start(10);
-        var socket = await server.AcceptSocketAsync(); // wait for client
-        WriteLine("Connected new client!");
-        
-        var worker = serviceProvider.GetRequiredService<IWorker>();
-
-        _ = Task.Run(async () => await HandleConnectionAsync(socket, worker));
-    }
-    finally
-    {
-        server.Stop();
-    }
-}
     }
 
     private static async Task HandleConnectionAsync(Socket socket, IWorker worker)
