@@ -5,20 +5,21 @@ namespace codecrafters_redis;
 
 public interface IWorker
 {
-    Task HandleConnectionAsync(Socket socket);
+    Task<bool> HandleConnectionAsync(Socket socket);
 }
 
 internal class TcpConnectionWorker(CommandHandler commandHandler, Settings settings, MasterManager masterManager): IWorker
 {
-    public async Task HandleConnectionAsync(Socket socket)
+    public async Task<bool> HandleConnectionAsync(Socket socket)
     {
         try
         {
+            var buffer = new byte[1024];
             while (socket.Connected)
             {
                 WriteLine("Waiting for request...");
-                var buffer = new byte[1024];
                 var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                WriteLine($"Received {received} bytes");
                 if (received == 0)
                 {
                     WriteLine("Socket disconnected");
@@ -30,6 +31,10 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
 
                 var command = requestPayload.Parse();
                 var response = HandleCommand(socket, command);
+                if (response.Type == ReplicaConnection)
+                {
+                    return false;
+                }
 
                 var value = response.Value;
                 WriteLine($"Going to send response: {Encoding.UTF8.GetString(value, 0, value.Length)}");
@@ -49,6 +54,8 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
         {
             WriteLine(e);
         }
+
+        return true;
     }
 
     private RedisValue HandleCommand(Socket socket, string[] command)
@@ -65,7 +72,7 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
             
             masterManager.InitReplicaConnection(socket, fullResync);
             
-            return RedisValue.EmptyResponse;
+            return RedisValue.ReplicaConnectionResponse;
         }
 
         return commandHandler.Handle(command);

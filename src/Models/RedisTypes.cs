@@ -7,5 +7,6 @@ public enum RedisTypes
     BulkString,
     BulkStringArray,
     ErrorString,
-    BinaryContent
+    BinaryContent,
+    ReplicaConnection
 }

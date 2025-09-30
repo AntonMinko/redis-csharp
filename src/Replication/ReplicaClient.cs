@@ -11,8 +11,7 @@ public class ReplicaClient(Settings settings)
 
     public async Task Ping()
     {
-        var response = await SendAndReceiveCommand(new[] { "PING" }.ToBulkStringArray());
-        WriteLine($"Ping response: {response}");
+        await SendAndReceiveCommand(new[] { "PING" }.ToBulkStringArray());
     }
 
     public async Task ConfListeningPort(int port)
@@ -28,6 +27,19 @@ public class ReplicaClient(Settings settings)
     public async Task<string> PSync(string masterReplicationId, int offset)
     {
         return await SendAndReceiveCommand(new[] {"PSYNC", masterReplicationId, offset.ToString()}.ToBulkStringArray());
+    }
+
+    public async Task<string> ReceiveRDB()
+    {
+        var buffer = new byte[1024];
+        var received = await _connection.Client.ReceiveAsync(buffer, SocketFlags.None);
+        if (received == 0)
+        {
+            WriteLine("Connection with the master disconnected");
+            return string.Empty;
+        }
+
+        return Encoding.UTF8.GetString(buffer, 0, received);
     }
 
     public async IAsyncEnumerable<string> WaitForCommandsAsync()

@@ -18,6 +18,7 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
             await _replicationClient.ConfListeningPort(settings.Runtime.Port);
             await _replicationClient.ConfCapabilities();
             await _replicationClient.PSync("?", -1);
+            await _replicationClient.ReceiveRDB();
             
             CommandWaiterTask = Task.Run(async () => await WaitForCommandsAsync());
         }
@@ -31,8 +32,16 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
     {
         await foreach (var commandPayload in _replicationClient!.WaitForCommandsAsync())
         {
-            var command = commandPayload.Parse();
-            commandHandler.Handle(command);
+            try
+            {
+                WriteLine($"Received command payload: {commandPayload}");
+                var command = commandPayload.Parse();
+                commandHandler.Handle(command);
+            }
+            catch (Exception e)
+            {
+                WriteLine($"Unable to Process command from the master: {e}");
+            }
         }
     }
 }
