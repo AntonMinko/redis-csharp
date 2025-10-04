@@ -5,14 +5,14 @@ using System.Threading.Channels;
 
 namespace codecrafters_redis.Replication;
 
-public class ReplicaClient(Settings settings)
+internal class ReplicaClient(Settings settings)
 {
     private static readonly HashSet<char> Delimiters = ['*', '+'];
     
     private readonly byte[] _buffer = new byte[1024];
     private readonly TcpClient _connection = new(settings.Replication.SlaveReplicaSettings!.MasterHost, settings.Replication.SlaveReplicaSettings.MasterPort);
 
-    public BlockingCollection<string> MasterCommandQueue { get; private set; } = new();
+    internal BlockingCollection<string> MasterCommandQueue { get; private set; } = new();
     
     public async Task Ping()
     {

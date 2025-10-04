@@ -3,6 +3,7 @@ namespace codecrafters_redis.Replication;
 internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
 {
     private ReplicaClient? _replicationClient;
+    private int _offset = 0;
     public Task? CommandWaiterTask { get; private set; }
     public Task? CommandProcessorTask { get; private set; }
     
@@ -33,13 +34,12 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
     {
         return Task.Run(async () =>
         {
-            foreach (var commandString in _replicationClient!.MasterCommandQueue.GetConsumingEnumerable())
+            foreach (var payload in _replicationClient!.MasterCommandQueue.GetConsumingEnumerable())
             {
                 try
                 {
-                    $"Received command payload: {commandString.Replace("\r\n", "\\r\\n")}".WriteLineEncoded();
-                    var command = commandString.Parse();
-                    await HandleCommand(command);
+                    $"Received command payload: {payload.Replace("\r\n", "\\r\\n")}".WriteLineEncoded();
+                    await HandleCommand(payload);
                 }
                 catch (Exception e)
                 {
@@ -49,18 +49,25 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
         });
     }
 
-    private async Task HandleCommand(string[] command)
+    private async Task HandleCommand(string payload)
     {
-        if (command.Length == 0) return;
+        var command = payload.Parse();
+
+        if (command.Length == 0)
+        {
+            _offset += payload.Length;
+            return;
+        }
 
         switch (command[0].ToUpperInvariant())
         {
             case "REPLCONF":
-                await _replicationClient!.SendAckResponse(0);
+                await _replicationClient!.SendAckResponse(_offset);
                 break;
             default:
                 commandHandler.Handle(command);
                 break;
         }
+        _offset += payload.Length;
     }
 }
