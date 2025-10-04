@@ -35,6 +35,12 @@ public class ReplicaClient(Settings settings)
         ProcessPSyncResponse(payload);
     }
 
+    public async Task SendAckResponse(int offset)
+    {
+        var message = new[] { "REPLCONF", "ACK", offset.ToString() }.ToBulkStringArray();
+        await _connection.Client.SendAsync(message.Value);
+    }
+
     private void ProcessPSyncResponse(string payload)
     {
         /*

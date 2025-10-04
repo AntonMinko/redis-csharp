@@ -31,7 +31,7 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
 
     private Task ProcessCommandsAsync()
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             foreach (var commandString in _replicationClient!.MasterCommandQueue.GetConsumingEnumerable())
             {
@@ -39,7 +39,7 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
                 {
                     $"Received command payload: {commandString.Replace("\r\n", "\\r\\n")}".WriteLineEncoded();
                     var command = commandString.Parse();
-                    commandHandler.Handle(command);
+                    await HandleCommand(command);
                 }
                 catch (Exception e)
                 {
@@ -47,5 +47,20 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
                 }
             }
         });
+    }
+
+    private async Task HandleCommand(string[] command)
+    {
+        if (command.Length == 0) return;
+
+        switch (command[0].ToUpperInvariant())
+        {
+            case "REPLCONF":
+                await _replicationClient!.SendAckResponse(0);
+                break;
+            default:
+                commandHandler.Handle(command);
+                break;
+        }
     }
 }
