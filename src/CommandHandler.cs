@@ -23,14 +23,14 @@ internal class CommandHandler(IStorage storage, Settings settings)
             case "INFO":
                 return HandleInfo(command);
             case "REPLCONF":
-                return HandlePerfConf(command);
+                return HandleReplConf(command);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
         }
     }
 
-    private RedisValue HandlePerfConf(string[] command)
+    private RedisValue HandleReplConf(string[] command)
     {
         return OkBytes;
     }

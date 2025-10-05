@@ -41,6 +41,11 @@ public static class RedisTypesExtensions
         var prefix = Encoding.UTF8.GetBytes($"${bytes.Length}\r\n");
         return new RedisValue(BinaryContent, prefix.Concat(bytes));
     }
+
+    public static RedisValue ToIntegerString(this int value)
+    {
+        return new(Integer, Encoding.UTF8.GetBytes($":{value}\r\n"));
+    }
     
     private static string ToBulkStringContent(this string s) => $"${s.Length}\r\n{s}\r\n";
 }

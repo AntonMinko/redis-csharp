@@ -19,6 +19,9 @@ var services = new ServiceCollection()
 var initializer = services.GetRequiredService<ServerInitializer>();
 await initializer.Initialize(args);
 
+var masterManager = services.GetRequiredService<MasterManager>();
+masterManager.StartReplication();
+
 var replicationManager = services.GetRequiredService<ReplicaManager>();
 await replicationManager.ConnectToMaster();
 

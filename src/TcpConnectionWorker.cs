@@ -10,6 +10,8 @@ public interface IWorker
 
 internal class TcpConnectionWorker(CommandHandler commandHandler, Settings settings, MasterManager masterManager): IWorker
 {
+    private long _lastCommandOffset = 0;
+    
     public async Task<bool> HandleConnectionAsync(Socket socket)
     {
         try
@@ -43,7 +45,7 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
                 
                 if (response.Success)
                 {
-                    masterManager.PropagateCommand(command);
+                    _lastCommandOffset = masterManager.PropagateCommand(command);
                 }
             }
 
@@ -60,21 +62,40 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
 
     private RedisValue HandleCommand(Socket socket, string[] command)
     {
-        if (command[0].ToUpperInvariant() == "PSYNC")
+        var commandType = command[0].ToUpperInvariant();
+
+        // handle replication commands here
+        switch (commandType)
         {
-            if (settings.Replication.Role != ReplicationRole.Master)
-                return "ERR Only master can handle PSYNC commands".ToErrorString();
-            
-            WriteLine("Handle PSync");
-            var masterReplId = settings.Replication.MasterReplicaSettings!.MasterReplId;
-            var masterReplOffset = settings.Replication.MasterReplicaSettings.MasterReplOffset;
-            var fullResync = $"FULLRESYNC {masterReplId} {masterReplOffset}".ToSimpleString();
-            
-            masterManager.InitReplicaConnection(socket, fullResync);
-            
-            return RedisValue.ReplicaConnectionResponse;
+            case "PSYNC":
+                return HandlePSyncCommand(socket);
+            case "WAIT":
+                return HandleWaitCommand(command);
         }
 
         return commandHandler.Handle(command);
+    }
+
+    private RedisValue HandleWaitCommand(string[] command)
+    {
+        if (settings.Replication.Role != ReplicationRole.Master)
+            return "Only master can handle the WAIT command".ToErrorString();
+        
+        return masterManager.CountReplicasWithOffset(_lastCommandOffset).ToIntegerString();
+    }
+
+    private RedisValue HandlePSyncCommand(Socket socket)
+    {
+        if (settings.Replication.Role != ReplicationRole.Master)
+            return "ERR Only master can handle PSYNC commands".ToErrorString();
+            
+        WriteLine("Handle PSync");
+        var masterReplId = settings.Replication.MasterReplicaSettings!.MasterReplId;
+        var masterReplOffset = settings.Replication.MasterReplicaSettings.MasterReplOffset;
+        var fullResync = $"FULLRESYNC {masterReplId} {masterReplOffset}".ToSimpleString();
+            
+        masterManager.InitReplicaConnection(socket, fullResync);
+            
+        return RedisValue.ReplicaConnectionResponse;
     }
 }
