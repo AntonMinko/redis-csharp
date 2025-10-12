@@ -123,7 +123,7 @@ internal class RdbParser
             
             string key = await ReadStringAsync(stream, buffer);
             string value = await ReadStringAsync(stream, buffer);
-            kvp.Add(key, new StorageValue(value, expiresAt));
+            kvp.Add(key, new StorageValue(new(ValueType.String, value), expiresAt));
         }
 
         return kvp;

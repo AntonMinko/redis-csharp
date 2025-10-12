@@ -3,7 +3,7 @@ using System.Text;
 
 namespace codecrafters_redis.Helpers;
 
-public static class RedisTypesExtensions
+internal static class RedisTypesExtensions
 {
     public const string OkString = "+OK\r\n";
     public static readonly RedisValue NullBulkString = new(BulkString, Encoding.UTF8.GetBytes("$-1\r\n"));
@@ -21,6 +21,13 @@ public static class RedisTypesExtensions
     public static RedisValue ToBulkString(this string? s)
     {
         var value = s == null ? Encoding.UTF8.GetBytes("$-1\r\n") : Encoding.UTF8.GetBytes(s.ToBulkStringContent());
+        return new RedisValue(BulkString, value);
+    }
+    
+    public static RedisValue ToBulkString(this TypedValue? typedValue)
+    {
+        string? stringValue = typedValue?.GetAsString();
+        var value = stringValue == null ? Encoding.UTF8.GetBytes("$-1\r\n") : Encoding.UTF8.GetBytes(stringValue.ToBulkStringContent());
         return new RedisValue(BulkString, value);
     }
 

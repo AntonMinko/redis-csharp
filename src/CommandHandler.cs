@@ -22,6 +22,8 @@ internal class CommandHandler(IStorage storage, Settings settings)
                 return HandleKeys(command);
             case "INFO":
                 return HandleInfo(command);
+            case "RPUSH":
+                return HandleRPush(command);
             default:
                 WriteLine("Unknown command: " + String.Join(" ", command));
                 return $"Unknown command {command[0]}".ToErrorString();
@@ -120,8 +122,35 @@ internal class CommandHandler(IStorage storage, Settings settings)
             }
         }
         
-        storage.Set(key, value, expiresAfterMs);
+        storage.Set(key, new(ValueType.String, value), expiresAfterMs);
         return OkBytes;
+    }
+    
+    private RedisValue HandleRPush(string[] command)
+    {
+        if (command.Length < 3) return "ERR wrong number of arguments for 'RPUSH' command".ToErrorString();
+        
+        var key = command[1];
+        var value = command[2];
+
+        var typedValue = storage.Get(key);
+        if (typedValue == null)
+        {
+            storage.Set(key, new(ValueType.StringArray, new List<string> { value }));
+            return 1.ToIntegerString();
+        }
+
+        if (typedValue.Value.Type != ValueType.StringArray)
+        {
+            return "WRONGTYPE Operation against a key holding the wrong kind of value".ToErrorString();
+        }
+
+        var list = typedValue.Value.GetAsStringArray();
+        list.Add(value);
+        
+        storage.Set(key, typedValue.Value);
+        
+        return list.Count.ToIntegerString();
     }
 
     private RedisValue HandleGet(string[] command)
@@ -129,6 +158,11 @@ internal class CommandHandler(IStorage storage, Settings settings)
         if (command.Length < 2) return NullBulkString;
         
         var key = command[1];
-        return storage.Get(key).ToBulkString();
+        var typedValue = storage.Get(key);
+        if (typedValue.HasValue && typedValue.Value.Type != ValueType.String)
+        {
+            return "WRONGTYPE Operation against a key holding the wrong kind of value".ToErrorString();
+        }
+        return typedValue.ToBulkString();
     }
 }
