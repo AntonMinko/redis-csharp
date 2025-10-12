@@ -9,6 +9,9 @@ public static class RedisTypesExtensions
     public static readonly RedisValue NullBulkString = new(BulkString, Encoding.UTF8.GetBytes("$-1\r\n"));
     public static readonly RedisValue NullBulkStringArray = new(BulkString, Encoding.UTF8.GetBytes("*-1\r\n"));
     public static readonly RedisValue OkBytes = new(SimpleString, Encoding.UTF8.GetBytes(OkString));
+    public static readonly RedisValue ReplicaConnectionResponse = new(ReplicaConnection, []);
+    public static readonly RedisValue NoResponse = new(RedisTypes.Void, []);
+    
     private static readonly byte[] EmptyBulkStringArray = Encoding.UTF8.GetBytes("*0\r\n");
     
     public static RedisValue ToSimpleString(this string s) => new(SimpleString, Encoding.UTF8.GetBytes($"+{s}\r\n"));

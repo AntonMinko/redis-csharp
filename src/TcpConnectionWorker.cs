@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 
@@ -10,6 +11,8 @@ public interface IWorker
 
 internal class TcpConnectionWorker(CommandHandler commandHandler, Settings settings, MasterManager masterManager): IWorker
 {
+    private const int WaitPollIntervalMs = 5;
+    
     private long _lastCommandOffset = 0;
     
     public async Task<bool> HandleConnectionAsync(Socket socket)
@@ -29,23 +32,25 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
                 }
 
                 var requestPayload = Encoding.UTF8.GetString(buffer, 0, received);
-                WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}");
+                $"Thread {Thread.CurrentThread.ManagedThreadId}. Received request: {requestPayload}".WriteLineEncoded();
 
                 var command = requestPayload.Parse();
-                var response = HandleCommand(socket, command);
-                if (response.Type == ReplicaConnection)
+                var response = await HandleCommand(socket, command);
+                if (response.Type == ReplicaConnection || response.Type == RedisTypes.Void)
                 {
-                    return false;
+                    $"Sending no response to command {command}".WriteLineEncoded();
+                    continue;
                 }
 
                 var value = response.Value;
-                WriteLine($"Going to send response: {Encoding.UTF8.GetString(value, 0, value.Length)}");
+                $"Going to send response: {Encoding.UTF8.GetString(value, 0, value.Length)}".WriteLineEncoded();
 
                 await socket.SendAsync(value);
                 
                 if (response.Success)
                 {
                     _lastCommandOffset = masterManager.PropagateCommand(command);
+                    $"Last command offset: {_lastCommandOffset}".WriteLineEncoded();
                 }
             }
 
@@ -60,28 +65,61 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
         return true;
     }
 
-    private RedisValue HandleCommand(Socket socket, string[] command)
+    private async Task<RedisValue> HandleCommand(Socket socket, string[] command)
     {
         var commandType = command[0].ToUpperInvariant();
 
         // handle replication commands here
         switch (commandType)
         {
+            case "REPLCONF":
+                return HandleReplConf(command, socket);
             case "PSYNC":
                 return HandlePSyncCommand(socket);
             case "WAIT":
-                return HandleWaitCommand(command);
+                return await HandleWaitCommand(command);
         }
 
         return commandHandler.Handle(command);
     }
 
-    private RedisValue HandleWaitCommand(string[] command)
+    private RedisValue HandleReplConf(string[] command, Socket socket)
+    {
+        if (command.Length < 3) return "REPLCONF should contain two arguments".ToErrorString();
+        
+        string commandSubtype = command[1];
+        switch (commandSubtype)
+        {
+            case "ACK":
+                long ackOffset = long.Parse(command[2]);
+                masterManager.SetReplicaAckOffset(ackOffset, socket);
+                return NoResponse; 
+            default:
+                return OkBytes;
+        }
+    }
+    
+    private async Task<RedisValue> HandleWaitCommand(string[] command)
     {
         if (settings.Replication.Role != ReplicationRole.Master)
             return "Only master can handle the WAIT command".ToErrorString();
         
-        return masterManager.CountReplicasWithOffset(_lastCommandOffset).ToIntegerString();
+        int expectReplicas = int.Parse(command[1]);
+        int timeoutMs = int.Parse(command[2]);
+        $"Handling wait command. Expected replicas: {expectReplicas}, timeout: {timeoutMs} ms, Last command offset: {_lastCommandOffset}".WriteLineEncoded();
+        
+        int upToDateReplicas = masterManager.CountReplicasWithAckOffset(_lastCommandOffset);
+        if (upToDateReplicas < expectReplicas)
+        {
+            var delayTask = Task.Delay(timeoutMs);
+            await masterManager.UpdateReplicasOffsets();
+
+            await delayTask;
+        }
+        
+        // on timeout, return the actual number of sync replicas
+        upToDateReplicas = masterManager.CountReplicasWithAckOffset(_lastCommandOffset);
+        return upToDateReplicas.ToIntegerString();
     }
 
     private RedisValue HandlePSyncCommand(Socket socket)
@@ -96,6 +134,6 @@ internal class TcpConnectionWorker(CommandHandler commandHandler, Settings setti
             
         masterManager.InitReplicaConnection(socket, fullResync);
             
-        return RedisValue.ReplicaConnectionResponse;
+        return ReplicaConnectionResponse;
     }
 }

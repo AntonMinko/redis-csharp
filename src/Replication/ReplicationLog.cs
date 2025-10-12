@@ -19,7 +19,7 @@ public class ReplicationLog
             Entries.Add(new Entry(offset, payload));
             OffsetToIndex.Add(offset, Entries.Count - 1);
             _nextOffset += payload.Length;
-            return offset;
+            return _nextOffset;
         }
     }
 
@@ -27,6 +27,8 @@ public class ReplicationLog
     {
         if (startOffset >= _nextOffset) yield break;
         
+        $"GetCommandsToReplicate: startOffset: {startOffset}, _nextOffset: {_nextOffset}".WriteLineEncoded();
+
         int startIndex = OffsetToIndex[startOffset];
         var endIndex = Entries.Count - 1;
         for (int i = startIndex; i <= endIndex; i++)

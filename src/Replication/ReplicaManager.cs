@@ -38,7 +38,7 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
             {
                 try
                 {
-                    $"Received command payload: {payload.Replace("\r\n", "\\r\\n")}".WriteLineEncoded();
+                    $"Received command payload: {payload}".WriteLineEncoded();
                     await HandleCommand(payload);
                 }
                 catch (Exception e)

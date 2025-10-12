@@ -9,5 +9,6 @@ public enum RedisTypes
     ErrorString,
     BinaryContent,
     ReplicaConnection,
-    Integer
+    Integer,
+    Void
 }
