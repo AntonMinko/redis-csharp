@@ -131,13 +131,13 @@ internal class CommandHandler(IStorage storage, Settings settings)
         if (command.Length < 3) return "ERR wrong number of arguments for 'RPUSH' command".ToErrorString();
         
         var key = command[1];
-        var value = command[2];
+        var values = command.Skip(2).ToList();
 
         var typedValue = storage.Get(key);
         if (typedValue == null)
         {
-            storage.Set(key, new(ValueType.StringArray, new List<string> { value }));
-            return 1.ToIntegerString();
+            storage.Set(key, new(ValueType.StringArray, values));
+            return values.Count.ToIntegerString();
         }
 
         if (typedValue.Value.Type != ValueType.StringArray)
@@ -146,7 +146,10 @@ internal class CommandHandler(IStorage storage, Settings settings)
         }
 
         var list = typedValue.Value.GetAsStringArray();
-        list.Add(value);
+        foreach (var value in values)
+        {
+            list.Add(value);
+        }
         
         storage.Set(key, typedValue.Value);
         
