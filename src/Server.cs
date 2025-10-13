@@ -6,13 +6,14 @@ namespace codecrafters_redis;
 
 public class Server(IServiceProvider serviceProvider, Settings settings)
 {
+    internal IDictionary<int, ClientConnection> Clients { get; } = new Dictionary<int, ClientConnection>();
+    private int _nextId = 0;
+    
     internal async Task StartAndListen()
     {
-        WriteLine("Logs from your program will appear here!");
-
         int port = settings.Runtime.Port;
         TcpListener server = new TcpListener(IPAddress.Any, port);
-        WriteLine($"Listening on port {port}");
+        WriteLine($"Server listening on port {port}");
 
         try
         {
@@ -21,10 +22,8 @@ public class Server(IServiceProvider serviceProvider, Settings settings)
             {
                 var socket = await server.AcceptSocketAsync(); // wait for client
                 WriteLine("Connected new client!");
-                
-                var worker = serviceProvider.GetRequiredService<IWorker>();
 
-                _ = Task.Run(async () => await HandleConnectionAsync(socket, worker));
+                _ = Task.Run(async () => await HandleConnectionAsync(socket));
             }
         }
         finally
@@ -34,9 +33,14 @@ public class Server(IServiceProvider serviceProvider, Settings settings)
         }
     }
 
-    private static async Task HandleConnectionAsync(Socket socket, IWorker worker)
+    private async Task HandleConnectionAsync(Socket socket)
     {
-        var disposeSocket = await worker.HandleConnectionAsync(socket);
+        int connectionId = _nextId++;
+        var connection = new ClientConnection(connectionId, socket);
+        Clients.Add(connectionId, connection);
+        
+        var worker = serviceProvider.GetRequiredService<IWorker>();
+        var disposeSocket = await worker.HandleConnectionAsync(connection);
         if (disposeSocket) socket.Dispose();
     }
 }

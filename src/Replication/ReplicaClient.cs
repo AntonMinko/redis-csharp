@@ -5,13 +5,21 @@ using System.Threading.Channels;
 
 namespace codecrafters_redis.Replication;
 
-internal class ReplicaClient(Settings settings)
+internal class ReplicaClient
 {
     private static readonly HashSet<char> Delimiters = ['*', '+'];
     
     private readonly byte[] _buffer = new byte[1024];
-    private readonly TcpClient _connection = new(settings.Replication.SlaveReplicaSettings!.MasterHost, settings.Replication.SlaveReplicaSettings.MasterPort);
+    private readonly TcpClient _tcpClient;
+    private readonly Socket _socket;
+    internal ClientConnection ClientConnection { get; private set; }
 
+    public ReplicaClient(Settings settings)
+    {
+        _tcpClient = new TcpClient(settings.Replication.SlaveReplicaSettings!.MasterHost, settings.Replication.SlaveReplicaSettings.MasterPort);
+        _socket = _tcpClient.Client;
+        ClientConnection = new ClientConnection(-1, _tcpClient.Client);
+    }
     internal BlockingCollection<string> MasterCommandQueue { get; private set; } = new();
     
     public async Task Ping()
@@ -38,16 +46,16 @@ internal class ReplicaClient(Settings settings)
     public async Task SendAckResponse(int offset)
     {
         var message = new[] { "REPLCONF", "ACK", offset.ToString() }.ToBulkStringArray();
-        await _connection.Client.SendAsync(message.Value);
+        await _socket.SendAsync(message.Value);
     }
 
     private void ProcessPSyncResponse(string payload)
     {
         /*
          * Payload contains:
-         * * PSynn response as a simple string (starts with +)
+         * * PSync response as a simple string (starts with +)
          * * Optionally, RDB file content as Bulk String (starts with $)
-         * * Optionally, one or more commands as Buld String Array (start with *)
+         * * Optionally, one or more commands as Bulk String Array (starts with *)
          */
         var rdbStartIndex = payload.IndexOf('$');
         if (rdbStartIndex > 0)
@@ -70,11 +78,11 @@ internal class ReplicaClient(Settings settings)
 
     public async Task WaitForCommandsAsync()
     {
-        while (_connection.Connected)
+        while (_tcpClient.Connected)
         {
             WriteLine("Waiting for commands from the master...");
             _buffer.Initialize();
-            var received = await _connection.Client.ReceiveAsync(_buffer, SocketFlags.None);
+            var received = await _socket.ReceiveAsync(_buffer, SocketFlags.None);
             if (received == 0)
             {
                 WriteLine("Connection with the master disconnected");
@@ -85,18 +93,18 @@ internal class ReplicaClient(Settings settings)
             AddCommandsToQueue(payload);
         }
 
-        _connection.Close();
+        _tcpClient.Close();
         WriteLine("Connection with the master closed");
     }
 
     private async Task<string> SendAndReceiveCommand(RedisValue message)
     {
-        if (!_connection.Connected) throw new ChannelClosedException();
+        if (!_tcpClient.Connected) throw new ChannelClosedException();
 
-        await _connection.Client.SendAsync(message.Value);
+        await _socket.SendAsync(message.Value);
         
         _buffer.Initialize();
-        int received = await _connection.Client.ReceiveAsync(_buffer);
+        int received = await _socket.ReceiveAsync(_buffer);
         var payload = Encoding.UTF8.GetString(_buffer, 0, received);
         $"Received from master: {payload}".WriteLineEncoded();
         return payload;

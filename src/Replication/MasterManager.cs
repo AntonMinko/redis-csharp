@@ -1,9 +1,8 @@
-using System.Collections.Concurrent;
-using System.Net.Sockets;
+using codecrafters_redis.Commands;
 
 namespace codecrafters_redis.Replication;
 
-public class MasterManager(Settings settings)
+internal class MasterManager(Settings settings, Server server)
 {
     private const string EmptyRdbFile = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
     
@@ -43,30 +42,24 @@ public class MasterManager(Settings settings)
         });
     }
     
-    public void InitReplicaConnection(Socket socket, RedisValue pSyncResponse)
+    public void InitReplicaConnection(ClientConnection connection, RedisValue pSyncResponse)
     {
         var emptyRdbFileBytes = Convert.FromBase64String(EmptyRdbFile).ToBinaryContent();
+        
+        var socket = connection.Socket;
         socket.Send(pSyncResponse.Value);
         socket.Send(emptyRdbFileBytes.Value);
 
-        var replica = new Replica(_replicas.Count, socket);
+        var replica = new Replica(connection.Id, socket);
         _replicas.Add(replica);
         $"Connected replica with id {replica.Id}".WriteLineEncoded();
     }
 
-    public long PropagateCommand(string[] command)
+    public long PropagateCommand(Command command)
     {
-        var commandType = command[0].ToUpperInvariant();
-        switch (commandType)
-        {
-            case "SET":
-                WriteLine($"Sending {commandType} command to replicas");
-                var commandBytes = command.ToBulkStringArray().Value;
-                return _replicationLog.Append(commandBytes);
-            default:
-                WriteLine($"Command {commandType} shouldn't be replicated");
-                return _replicationLog.Offset;
-        }
+        WriteLine($"Sending {command.Type} command to replicas");
+        var commandBytes = command.ToBulkStringArray().Value;
+        return _replicationLog.Append(commandBytes);
     }
 
     public int CountReplicasWithAckOffset(long offset) => _replicas.Count(replica => replica.AckOffset >= offset);
@@ -77,12 +70,12 @@ public class MasterManager(Settings settings)
         await Task.WhenAll(tasks);
     }
 
-    public void SetReplicaAckOffset(long offset, Socket socket)
+    public void SetReplicaAckOffset(long offset, ClientConnection connection)
     {
-        var replica = _replicas.FirstOrDefault(replica => replica.Socket == socket);
+        var replica = _replicas.FirstOrDefault(replica => replica.Id == connection.Id);
         if (replica == null)
         {
-            $"Unable to find replica by socket {socket.Handle}".WriteLineEncoded();
+            $"Unable to find replica by connectionId {connection.Id}".WriteLineEncoded();
             return;
         }
         

@@ -1,10 +1,12 @@
+using codecrafters_redis.Commands;
+using codecrafters_redis.Commands.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 
 var userSettingsProvider = new UserSettingsProvider();
 await userSettingsProvider.InitializeUserSettingsAsync();
 var userSettings = userSettingsProvider.GetUserSettings();
 
-var services = new ServiceCollection()
+var serviceBuilder = new ServiceCollection()
     .AddSingleton<IUserSettingsProvider>(userSettingsProvider)
     .AddSingleton(userSettings)
     .AddSingleton<Server>()
@@ -13,7 +15,23 @@ var services = new ServiceCollection()
     .AddSingleton<MasterManager>()
     .AddTransient<ServerInitializer>()
     .AddTransient<IWorker, TcpConnectionWorker>()
-    .AddTransient<CommandHandler>()
+    .AddTransient<Processor>();
+
+serviceBuilder
+    .AddTransient<ICommandHandler, Config>()
+    .AddTransient<ICommandHandler, Echo>()
+    .AddTransient<ICommandHandler, Get>()
+    .AddTransient<ICommandHandler, Info>()
+    .AddTransient<ICommandHandler, Keys>()
+    .AddTransient<ICommandHandler, LRange>()
+    .AddTransient<ICommandHandler, Ping>()
+    .AddTransient<ICommandHandler, PSync>()
+    .AddTransient<ICommandHandler, ReplConf>()
+    .AddTransient<ICommandHandler, RPush>()
+    .AddTransient<ICommandHandler, Set>()
+    .AddTransient<ICommandHandler, Wait>();
+
+var services = serviceBuilder
     .BuildServiceProvider();
 
 var initializer = services.GetRequiredService<ServerInitializer>();

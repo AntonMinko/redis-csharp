@@ -2,6 +2,7 @@ namespace codecrafters_redis;
 
 enum ValueType
 {
+    Unknown,
     String,
     StringArray
 }

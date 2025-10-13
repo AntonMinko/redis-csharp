@@ -1,5 +1,6 @@
 using System.Text;
-    
+using codecrafters_redis.Commands;
+
 
 namespace codecrafters_redis.Helpers;
 
@@ -8,11 +9,10 @@ internal static class RedisTypesExtensions
     public const string OkString = "+OK\r\n";
     public static readonly RedisValue NullBulkString = new(BulkString, Encoding.UTF8.GetBytes("$-1\r\n"));
     public static readonly RedisValue NullBulkStringArray = new(BulkString, Encoding.UTF8.GetBytes("*-1\r\n"));
+    public static readonly RedisValue EmptyBulkStringArray = new(BulkString, Encoding.UTF8.GetBytes("*0\r\n"));
     public static readonly RedisValue OkBytes = new(SimpleString, Encoding.UTF8.GetBytes(OkString));
     public static readonly RedisValue ReplicaConnectionResponse = new(ReplicaConnection, []);
     public static readonly RedisValue NoResponse = new(RedisTypes.Void, []);
-    
-    private static readonly byte[] EmptyBulkStringArray = Encoding.UTF8.GetBytes("*0\r\n");
     
     public static RedisValue ToSimpleString(this string s) => new(SimpleString, Encoding.UTF8.GetBytes($"+{s}\r\n"));
 
@@ -31,20 +31,22 @@ internal static class RedisTypesExtensions
         return new RedisValue(BulkString, value);
     }
 
-    public static RedisValue ToBulkStringArray(this string[] strings)
+    public static RedisValue ToBulkStringArray(this IEnumerable<string> strings)
     {
-        if (strings.Length == 0) return new RedisValue(BulkString, EmptyBulkStringArray);
-        
         var sb = new StringBuilder();
-        sb.Append('*');
-        sb.Append(strings.Length);
-        sb.Append("\r\n");
+        int count = 0;
         foreach (var s in strings)
         {
             sb.Append(s.ToBulkStringContent());
+            count++;
         }
+
+        sb.Insert(0, $"*{count}\r\n");
         return new RedisValue(BulkString, Encoding.UTF8.GetBytes(sb.ToString()));
     }
+    
+    public static RedisValue ToBulkStringArray(this Command command) => 
+        new[] { command.Type.ToString() }.Concat(command.Arguments).ToBulkStringArray();
 
     public static RedisValue ToBinaryContent(this byte[] bytes)
     {

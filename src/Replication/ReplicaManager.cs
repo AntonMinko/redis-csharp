@@ -1,11 +1,11 @@
+using codecrafters_redis.Commands;
+
 namespace codecrafters_redis.Replication;
 
-internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
+internal class ReplicaManager(Settings settings, Processor processor)
 {
     private ReplicaClient? _replicationClient;
     private int _offset = 0;
-    public Task? CommandWaiterTask { get; private set; }
-    public Task? CommandProcessorTask { get; private set; }
     
     public async Task ConnectToMaster()
     {
@@ -21,13 +21,18 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
             await _replicationClient.ConfCapabilities();
             await _replicationClient.PSync("?", -1);
             
-            CommandWaiterTask = _replicationClient!.WaitForCommandsAsync();
-            CommandProcessorTask = ProcessCommandsAsync();
+            _ = _replicationClient!.WaitForCommandsAsync();
+            _ = ProcessCommandsAsync();
         }
         catch (Exception e)
         {
             WriteLine($"Unable to ConnectToMaster: {e}");
         }
+    }
+
+    public async Task SendAckOffset()
+    {
+        await _replicationClient!.SendAckResponse(_offset);
     }
 
     private Task ProcessCommandsAsync()
@@ -51,23 +56,17 @@ internal class ReplicaManager(Settings settings, CommandHandler commandHandler)
 
     private async Task HandleCommand(string payload)
     {
-        var command = payload.Parse();
+        var command = Command.Parse(payload);
 
-        if (command.Length == 0)
+        if (command.Type == CommandType.ReplConf && command.Arguments[0].ToUpperInvariant() == "GETACK")
         {
-            _offset += payload.Length;
-            return;
+            await _replicationClient!.SendAckResponse(_offset);
         }
-
-        switch (command[0].ToUpperInvariant())
+        else
         {
-            case "REPLCONF":
-                await _replicationClient!.SendAckResponse(_offset);
-                break;
-            default:
-                commandHandler.Handle(command);
-                break;
+            await processor.Handle(payload, _replicationClient!.ClientConnection);
         }
+        
         _offset += payload.Length;
     }
 }
