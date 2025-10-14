@@ -8,6 +8,7 @@ public enum CommandType
     Get,
     Info,
     Keys,
+    LLen,
     LPush,
     LRange,
     Ping,

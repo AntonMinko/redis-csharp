@@ -27,7 +27,7 @@ internal class LPush(IStorage storage, Settings settings) : BaseHandler(settings
             return Task.FromResult(error!);
         }
 
-        var list = typedValue.Value.GetAsStringArray();
+        var list = typedValue.Value.GetAsStringList();
         list.InsertRange(0, values);
         
         storage.Set(key, typedValue.Value);

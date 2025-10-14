@@ -23,7 +23,7 @@ internal class LRange(IStorage storage, Settings settings) : BaseHandler(setting
             return error!;
         }
 
-        List<string> list = typedValue.Value.GetAsStringArray();
+        List<string> list = typedValue.Value.GetAsStringList();
 
         if (start < 0)
         {
