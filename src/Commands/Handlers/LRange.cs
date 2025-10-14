@@ -23,10 +23,14 @@ internal class LRange(IStorage storage, Settings settings) : BaseHandler(setting
             return error!;
         }
 
-        var list = typedValue.Value.GetAsStringArray();
-        start = start < 0 ? 0 : start;
+        List<string> list = typedValue.Value.GetAsStringArray();
+        
+        start = start < 0 ? list.Count + start : start;
         end = end >= list.Count ? list.Count - 1 : end;
-        if (start > end) return EmptyBulkStringArray;
-        return list.Skip(start).Take(end - start + 1).ToBulkStringArray();
+        end = end < 0 ? list.Count + end : end;
+        int count = end - start + 1;
+        
+        if (count <= 0) return EmptyBulkStringArray;
+        return list.GetRange(start, count) .ToBulkStringArray();
     }
 }

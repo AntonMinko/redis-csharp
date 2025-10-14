@@ -10,7 +10,7 @@ enum ValueType
 internal record struct TypedValue(ValueType Type, object Value)
 {
     public string GetAsString() => (string)Value;
-    public IList<string> GetAsStringArray() => (List<string>)Value;
+    public List<string> GetAsStringArray() => (List<string>)Value;
 }
 
 internal record struct StorageValue(TypedValue Value, DateTime? ExpireAt = null);
