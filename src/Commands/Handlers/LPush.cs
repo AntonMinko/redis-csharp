@@ -13,25 +13,24 @@ internal class LPush(IStorage storage, Settings settings) : BaseHandler(settings
     protected override Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
     {
         var key = command.Arguments[0];
-        var values = command.Arguments.Skip(1).Reverse().ToList();
-
-        var typedValue = storage.Get(key);
-        if (typedValue == null)
-        {
-            storage.Set(key, new(ValueType.StringArray, values));
-            return Task.FromResult(values.Count.ToIntegerString());
-        }
-
-        if (!ValidateValueType(typedValue, out var error))
+        
+        var storedValue = storage.Get(key);
+        if (!ValidateValueType(storedValue, out var error))
         {
             return Task.FromResult(error!);
         }
+        
+        LinkedList<string> values = storedValue != null
+            ? storedValue.Value.GetAsStringList()
+            : new LinkedList<string>();
 
-        var list = typedValue.Value.GetAsStringList();
-        list.InsertRange(0, values);
+        for (int i = 1; i < command.Arguments.Length; i++)
+        {
+            values.AddFirst(command.Arguments[i]);
+        }
         
-        storage.Set(key, typedValue.Value);
+        storage.Set(key, new TypedValue(ValueType.StringArray, values));
         
-        return Task.FromResult(list.Count.ToIntegerString());
+        return Task.FromResult(values.Count.ToIntegerString());
     }
 }
