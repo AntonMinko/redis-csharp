@@ -23,6 +23,7 @@ serviceBuilder
     .AddTransient<ICommandHandler, Get>()
     .AddTransient<ICommandHandler, Info>()
     .AddTransient<ICommandHandler, Keys>()
+    .AddTransient<ICommandHandler, LPush>()
     .AddTransient<ICommandHandler, LRange>()
     .AddTransient<ICommandHandler, Ping>()
     .AddTransient<ICommandHandler, PSync>()

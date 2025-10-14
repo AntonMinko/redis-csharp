@@ -3,16 +3,17 @@ namespace codecrafters_redis.Commands;
 public enum CommandType
 {
     Unknown,
-    Ping,
+    Config,
     Echo,
     Get,
-    Set,
-    Config,
-    Keys,
     Info,
-    RPush,
+    Keys,
+    LPush,
     LRange,
+    Ping,
     ReplConf,
+    RPush,
     PSync,
+    Set,
     Wait,
 }
