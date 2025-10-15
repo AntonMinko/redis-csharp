@@ -15,10 +15,7 @@ internal class LPush(IStorage storage, Settings settings) : BaseHandler(settings
         var key = command.Arguments[0];
         
         var storedValue = storage.Get(key);
-        if (!ValidateValueType(storedValue, out var error))
-        {
-            return Task.FromResult(error!);
-        }
+        if (!ValidateValueType(storedValue, out var error)) return Task.FromResult(error!);
         
         LinkedList<string> values = storedValue != null
             ? storedValue.Value.GetAsStringList()

@@ -19,6 +19,11 @@ internal class KvpStorage : IStorage
         return val.Value;
     }
 
+    public void Remove(string key)
+    {
+        _store.TryRemove(key, out _);
+    }
+
     public void Initialize(IDictionary<string, StorageValue> loadedData) =>
         _store = new ConcurrentDictionary<string, StorageValue>(loadedData);
 

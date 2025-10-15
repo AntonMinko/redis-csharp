@@ -20,6 +20,7 @@ internal interface IStorage
 {
     void Set(string key, TypedValue value, int? expireAfterMs = null);
     TypedValue? Get(string key);
+    void Remove(string key);
     void Initialize(IDictionary<string, StorageValue> loadedData);
     IEnumerable<string> GetAllKeys();
 }
