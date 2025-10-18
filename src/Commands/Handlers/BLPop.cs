@@ -28,15 +28,16 @@ internal class BLPop(PubSub pubSub, IStorage storage, Settings settings) : LPopB
         pubSub.Subscribe(EventType.ListPushed, key, connection);
 
         var stopwatch = Stopwatch.StartNew();
-        while (!pubSub.IsEventFired(EventType.ListPushed, key, connection.Id) &&
+        string? value;
+        while (!pubSub.TryGetListPushedValue(key, connection, out value) &&
                !IsTimedOut(timeoutMs, stopwatch))
         {
             await Task.Delay(DelayMs);
         }
         
-        var undeliveredMessages = pubSub.Unsubscribe(EventType.ListPushed, key, connection.Id);
-        return undeliveredMessages.Any()
-            ? new[] { key, undeliveredMessages[0] }.ToBulkStringArray()
+        pubSub.Unsubscribe(EventType.ListPushed, key, connection);
+        return value != null
+            ? new[] { key, value }.ToBulkStringArray()
             : NullBulkStringArray;
     }
     

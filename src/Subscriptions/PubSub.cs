@@ -4,7 +4,7 @@ namespace codecrafters_redis.Subscriptions;
 
 internal class PubSub
 {
-    private class Subscription(EventType type, int subscriberId)
+    private class Subscription(int subscriberId)
     {
         public readonly int SubsсriberId = subscriberId;
         public ConcurrentQueue<string> Messages { get; } = new();
@@ -36,7 +36,7 @@ internal class PubSub
 
         if (subscriptions.All(x => x.SubsсriberId != subscriber.Id))
         {
-            var subscription = new Subscription(eventType, subscriber.Id);
+            var subscription = new Subscription(subscriber.Id);
             subscriptions.AddLast(subscription);
             subscriber.Subscriptions.AddLast(subscription);
             _subscriptions[topic] = subscriptions;
@@ -45,17 +45,18 @@ internal class PubSub
         return subscriber.SubscriptionsCount;
     }
 
-    public IList<string> Unsubscribe(EventType eventType, string eventKey, int subscriberId)
+    public int Unsubscribe(EventType eventType, string eventKey, ClientConnection clientConnection)
     {
         var topic = GetTopicName(eventType, eventKey);
-        if (!_subscriptions.TryGetValue(topic, out var subscriptions)) return new List<string>();
-
-        var subscription = subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriberId);
-        if (subscription == null) return new List<string>();
+        if (!_subscribers.TryGetValue(clientConnection.Id, out var subscriber)) return 0;
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions)) return subscriber.SubscriptionsCount;
+        
+        var subscription = subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriber.Id);
+        if (subscription == null) return subscriber.SubscriptionsCount;
         
         subscriptions.Remove(subscription);
-        _subscribers[subscriberId].Subscriptions.Remove(subscription);
-        return subscription.Messages.ToList();
+        subscriber.Subscriptions.Remove(subscription);
+        return subscriber.SubscriptionsCount;
     }
 
     public int Publish(EventType eventType, string eventKey, string eventPayload)
@@ -69,6 +70,19 @@ internal class PubSub
             EventType.Subscription => PublishSubscriptionMessage(eventKey, subscriptions, eventPayload),
             _ => throw new Exception($"Unknown event type {eventType}")
         };
+    }
+    
+    public bool TryGetListPushedValue(string eventKey, ClientConnection clientConnection, out string? value)
+    {
+        value = null;
+        var topic = GetTopicName(EventType.ListPushed, eventKey);
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions)) return false;
+        if (!_subscribers.TryGetValue(clientConnection.Id, out var subscriber)) return false;
+        
+        var subscription = subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriber.Id);
+        if (subscription == null) return false;
+        
+        return subscription.Messages.TryDequeue(out value);
     }
 
     private int PublishSubscriptionMessage(string eventKey, LinkedList<Subscription> subscriptions, string eventPayload)
