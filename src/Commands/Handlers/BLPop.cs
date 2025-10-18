@@ -34,8 +34,10 @@ internal class BLPop(PubSub pubSub, IStorage storage, Settings settings) : LPopB
             await Task.Delay(DelayMs);
         }
         
-        var payload = pubSub.Unsubscribe(EventType.ListPushed, key, connection.Id);
-        return payload == null ? NullBulkStringArray : new[] {key, payload}.ToBulkStringArray();
+        var undeliveredMessages = pubSub.Unsubscribe(EventType.ListPushed, key, connection.Id);
+        return undeliveredMessages.Any()
+            ? new[] { key, undeliveredMessages[0] }.ToBulkStringArray()
+            : NullBulkStringArray;
     }
     
     private bool IsTimedOut(int timeoutMs, Stopwatch stopwatch) => timeoutMs != 0 && stopwatch.Elapsed.Milliseconds >= timeoutMs;

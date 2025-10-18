@@ -28,7 +28,8 @@ internal class RPush(PubSub pubSub, IStorage storage, Settings settings) : BaseH
         for (int i = 1; i < command.Arguments.Length; i++)
         {
             var value = command.Arguments[i];
-            if (!pubSub.Publish(EventType.ListPushed, key, value))
+            int deliveries = pubSub.Publish(EventType.ListPushed, key, value);
+            if (deliveries == 0)
             {
                 values.AddLast(value);
             }

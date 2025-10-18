@@ -34,6 +34,7 @@ serviceBuilder
     .AddTransient<ICommandHandler, LRange>()
     .AddTransient<ICommandHandler, Ping>()
     .AddTransient<ICommandHandler, PSync>()
+    .AddTransient<ICommandHandler, Publish>()
     .AddTransient<ICommandHandler, ReplConf>()
     .AddTransient<ICommandHandler, RPush>()
     .AddTransient<ICommandHandler, Set>()
