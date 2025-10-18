@@ -4,65 +4,79 @@ namespace codecrafters_redis.Subscriptions;
 
 internal class PubSub
 {
-    private class Subscription(int subscriberId)
+    private class Subscription(EventType type, int subscriberId)
     {
         public readonly int SubsсriberId = subscriberId;
-        public bool IsEventFired { get; set; }
         public ConcurrentQueue<string> Messages { get; } = new();
     }
 
-    private readonly Dictionary<string, LinkedList<Subscription>> _subscriptions = new();
-    private readonly Dictionary<int, int> _subscribers = new();
-    
-    public int Subscribe(EventType eventType, string eventKey, int subscriberId)
+    private class Subscriber(ClientConnection client)
     {
-        var subscriptionKey = SubscriptionKey(eventType, eventKey);
-        if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions))
+        public readonly int Id = client.Id;
+        public readonly ClientConnection Client = client;
+        public readonly LinkedList<Subscription> Subscriptions = new();
+
+        public int SubscriptionsCount => Subscriptions.Count;
+    }
+
+    private readonly Dictionary<string, LinkedList<Subscription>> _subscriptions = new();
+    private readonly Dictionary<int, Subscriber> _subscribers = new();
+    
+    public int Subscribe(EventType eventType, string eventKey, ClientConnection clientConnection)
+    {
+        var topic = GetTopicName(eventType, eventKey);
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions))
         {
             subscriptions = new LinkedList<Subscription>();
         }
+        var subscriber = _subscribers.ContainsKey(clientConnection.Id) 
+            ? _subscribers[clientConnection.Id] 
+            : new Subscriber(clientConnection);
+        _subscribers[clientConnection.Id] = subscriber;
 
-        if (subscriptions.Any(x => x.SubsсriberId == subscriberId)) return _subscribers[subscriberId];
-        
-        subscriptions.AddLast(new Subscription(subscriberId));
-        _subscriptions[subscriptionKey] = subscriptions;
-        
-        _subscribers[subscriberId] = _subscribers.ContainsKey(subscriberId) ? ++_subscribers[subscriberId] : 1;
-        return _subscribers[subscriberId];
+        if (subscriptions.All(x => x.SubsсriberId != subscriber.Id))
+        {
+            var subscription = new Subscription(eventType, subscriber.Id);
+            subscriptions.AddLast(subscription);
+            subscriber.Subscriptions.AddLast(subscription);
+            _subscriptions[topic] = subscriptions;
+        }
+
+        return subscriber.SubscriptionsCount;
     }
 
     public IList<string> Unsubscribe(EventType eventType, string eventKey, int subscriberId)
     {
-        var subscriptionKey = SubscriptionKey(eventType, eventKey);
-        if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions)) return new List<string>();
+        var topic = GetTopicName(eventType, eventKey);
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions)) return new List<string>();
 
         var subscription = subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriberId);
         if (subscription == null) return new List<string>();
         
         subscriptions.Remove(subscription);
+        _subscribers[subscriberId].Subscriptions.Remove(subscription);
         return subscription.Messages.ToList();
     }
 
     public int Publish(EventType eventType, string eventKey, string eventPayload)
     {
-        int deliveries = 0;
-        var subscriptionKey = SubscriptionKey(eventType, eventKey);
-        if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions)) return deliveries;
+        var topic = GetTopicName(eventType, eventKey);
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions)) return 0;
 
         return eventType switch
         {
             EventType.ListPushed => PublishListPushedMessage(subscriptions, eventPayload),
-            EventType.Subscription => PublishSubscriptionMessage(subscriptions, eventPayload),
+            EventType.Subscription => PublishSubscriptionMessage(eventKey, subscriptions, eventPayload),
             _ => throw new Exception($"Unknown event type {eventType}")
         };
-
     }
 
-    private int PublishSubscriptionMessage(LinkedList<Subscription> subscriptions, string eventPayload)
+    private int PublishSubscriptionMessage(string eventKey, LinkedList<Subscription> subscriptions, string eventPayload)
     {
+        var message = new PubSubMessage(eventKey, eventPayload);
         foreach (var subscription in subscriptions)
         {
-            subscription.Messages.Enqueue(eventPayload);
+            _subscribers[subscription.SubsсriberId].Client.MessagesQueue.Add(message);
         }
         return subscriptions.Count;
     }
@@ -78,14 +92,15 @@ internal class PubSub
 
     public bool IsEventFired(EventType eventType, string eventKey, int subscriberId)
     {
-        var subscriptionKey = SubscriptionKey(eventType, eventKey);
-        if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions))
+        var topic = GetTopicName(eventType, eventKey);
+        if (!_subscriptions.TryGetValue(topic, out var subscriptions))
         {
             return false;
         }
-        
-        return subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriberId)?.IsEventFired ?? false;
+
+        var subscription = subscriptions.FirstOrDefault(x => x.SubsсriberId == subscriberId);
+        return subscription?.Messages.Any() ?? false;
     }
 
-    private string SubscriptionKey(EventType eventType, string eventKey) => $"{eventType}:{eventKey}";
+    private string GetTopicName(EventType eventType, string eventKey) => $"{eventType}:{eventKey}";
 }

@@ -25,7 +25,7 @@ internal class BLPop(PubSub pubSub, IStorage storage, Settings settings) : LPopB
 
         if (TryPop(key, 1, out var removedItems)) return new[] {key, removedItems[0]}.ToBulkStringArray();
         
-        pubSub.Subscribe(EventType.ListPushed, key, connection.Id);
+        pubSub.Subscribe(EventType.ListPushed, key, connection);
 
         var stopwatch = Stopwatch.StartNew();
         while (!pubSub.IsEventFired(EventType.ListPushed, key, connection.Id) &&
