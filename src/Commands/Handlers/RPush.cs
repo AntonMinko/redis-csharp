@@ -24,16 +24,19 @@ internal class RPush(SubscriptionManager subscriptionManager, IStorage storage, 
             ? storedValue.Value.GetAsStringList()
             : [];
 
+        int count = values.Count;
         for (int i = 1; i < command.Arguments.Length; i++)
         {
             var value = command.Arguments[i];
-            if (subscriptionManager.FireEvent(EventType.ListPushed, key, value)) continue;
-            
-            values.AddLast(value);
+            if (!subscriptionManager.FireEvent(EventType.ListPushed, key, value))
+            {
+                values.AddLast(value);
+            }
+            count++;
         }
         
         storage.Set(key, new TypedValue(ValueType.StringArray, values));
         
-        return values.Count.ToIntegerString();
+        return count.ToIntegerString();
     }
 }

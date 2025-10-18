@@ -19,7 +19,8 @@ internal class BLPop(SubscriptionManager subscriptionManager, IStorage storage, 
     protected override async Task<RedisValue> HandleSpecificAsync(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];
-        int timeoutSec = command.Arguments.Length == 2 ? int.Parse(command.Arguments[1]) : 0;
+        double timeoutSec = command.Arguments.Length == 2 ? double.Parse(command.Arguments[1]) : 0;
+        int timeoutMs = (int) (timeoutSec * 1000);
         $"Handling BLPop command. Waiting for key: {key}, timeout: {timeoutSec} sec".WriteLineEncoded();
 
         if (TryPop(key, 1, out var removedItems)) return new[] {key, removedItems[0]}.ToBulkStringArray();
@@ -28,7 +29,7 @@ internal class BLPop(SubscriptionManager subscriptionManager, IStorage storage, 
 
         var stopwatch = Stopwatch.StartNew();
         while (!subscriptionManager.IsEventFired(EventType.ListPushed, key, connection.Id) &&
-               !IsTimedOut(timeoutSec, stopwatch))
+               !IsTimedOut(timeoutMs, stopwatch))
         {
             await Task.Delay(DelayMs);
         }
@@ -37,5 +38,5 @@ internal class BLPop(SubscriptionManager subscriptionManager, IStorage storage, 
         return payload == null ? NullBulkStringArray : new[] {key, payload}.ToBulkStringArray();
     }
     
-    private bool IsTimedOut(int timeOutSec, Stopwatch stopwatch) => timeOutSec != 0 && stopwatch.Elapsed.Seconds >= timeOutSec;
+    private bool IsTimedOut(int timeoutMs, Stopwatch stopwatch) => timeoutMs != 0 && stopwatch.Elapsed.Milliseconds >= timeoutMs;
 }
