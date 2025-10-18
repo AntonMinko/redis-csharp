@@ -56,15 +56,22 @@ internal class ReplicaManager(Settings settings, Processor processor)
 
     private async Task HandleCommand(string payload)
     {
-        var command = Command.Parse(payload);
+        try
+        {
+            var command = Command.Parse(payload);
 
-        if (command.Type == CommandType.ReplConf && command.Arguments[0].ToUpperInvariant() == "GETACK")
-        {
-            await _replicationClient!.SendAckResponse(_offset);
+            if (command.Type == CommandType.ReplConf && command.Arguments[0].ToUpperInvariant() == "GETACK")
+            {
+                await _replicationClient!.SendAckResponse(_offset);
+            }
+            else
+            {
+                await processor.Handle(payload, _replicationClient!.ClientConnection);
+            }
         }
-        else
+        catch (Exception e)
         {
-            await processor.Handle(payload, _replicationClient!.ClientConnection);
+            WriteLine(e);
         }
         
         _offset += payload.Length;

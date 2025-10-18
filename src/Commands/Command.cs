@@ -6,6 +6,8 @@ public record Command(CommandType Type, string[] Arguments)
     
     public static Command Parse(string command)
     {
+        if (command == "*\r\n") return Unknown;
+        
         var parts = command.Split("\r\n").Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
         string commandTypeStr = parts[2];
         if (!Enum.TryParse(commandTypeStr, true, out CommandType commandType)) return Unknown;

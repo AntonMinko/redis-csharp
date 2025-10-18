@@ -16,7 +16,7 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<IStorage, KvpStorage>()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
-    .AddSingleton<SubscriptionManager>()
+    .AddSingleton<PubSub>()
     .AddTransient<ServerInitializer>()
     .AddTransient<IWorker, TcpConnectionWorker>()
     .AddTransient<Processor>();
@@ -37,6 +37,7 @@ serviceBuilder
     .AddTransient<ICommandHandler, ReplConf>()
     .AddTransient<ICommandHandler, RPush>()
     .AddTransient<ICommandHandler, Set>()
+    .AddTransient<ICommandHandler, Subscribe>()
     .AddTransient<ICommandHandler, Wait>();
 
 var services = serviceBuilder

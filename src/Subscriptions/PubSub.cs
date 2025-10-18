@@ -1,6 +1,6 @@
 namespace codecrafters_redis.Subscriptions;
 
-internal class SubscriptionManager
+internal class PubSub
 {
     private class Subscription(int subscriberId)
     {
@@ -10,8 +10,9 @@ internal class SubscriptionManager
     }
 
     private readonly Dictionary<string, LinkedList<Subscription>> _subscriptions = new();
+    private readonly Dictionary<int, int> _subscribers = new();
     
-    public void SubscribeFor(EventType eventType, string eventKey, int subscriberId)
+    public int Subscribe(EventType eventType, string eventKey, int subscriberId)
     {
         var subscriptionKey = SubscriptionKey(eventType, eventKey);
         if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions))
@@ -19,13 +20,16 @@ internal class SubscriptionManager
             subscriptions = new LinkedList<Subscription>();
         }
 
-        if (subscriptions.Any(x => x.SubsсriberId == subscriberId)) return;
+        if (subscriptions.Any(x => x.SubsсriberId == subscriberId)) return _subscribers[subscriberId];
         
         subscriptions.AddLast(new Subscription(subscriberId));
         _subscriptions[subscriptionKey] = subscriptions;
+        
+        _subscribers[subscriberId] = _subscribers.ContainsKey(subscriberId) ? _subscribers[subscriberId]++ : 1;
+        return _subscribers[subscriberId];
     }
 
-    public string? UnsubscribeFrom(EventType eventType, string eventKey, int subscriberId)
+    public string? Unsubscribe(EventType eventType, string eventKey, int subscriberId)
     {
         var subscriptionKey = SubscriptionKey(eventType, eventKey);
         if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions)) return null;
@@ -37,7 +41,7 @@ internal class SubscriptionManager
         return subscription.EventPayload;
     }
 
-    public bool FireEvent(EventType eventType, string eventKey, string? eventPayload = null)
+    public bool Publish(EventType eventType, string eventKey, string? eventPayload = null)
     {
         var subscriptionKey = SubscriptionKey(eventType, eventKey);
         if (!_subscriptions.TryGetValue(subscriptionKey, out var subscriptions)) return false;

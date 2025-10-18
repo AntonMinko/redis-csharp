@@ -27,6 +27,6 @@ internal class Wait(MasterManager masterManager, Settings settings) : BaseHandle
         
         // on timeout, return the actual number of sync replicas
         upToDateReplicas = masterManager.CountReplicasWithAckOffset(connection.LastCommandOffset);
-        return upToDateReplicas.ToIntegerString();
+        return upToDateReplicas.ToIntegerValue();
     }
 }

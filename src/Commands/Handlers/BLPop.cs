@@ -8,7 +8,7 @@ namespace codecrafters_redis.Commands.Handlers;
 
 [Arguments(Min = 1, Max = 2)]
 [Supports(StorageType = ValueType.StringArray)]
-internal class BLPop(SubscriptionManager subscriptionManager, IStorage storage, Settings settings) : LPopBase(storage, settings)
+internal class BLPop(PubSub pubSub, IStorage storage, Settings settings) : LPopBase(storage, settings)
 {
     private const int DelayMs = 100;
     public override CommandType CommandType => CommandType.BLPop;
@@ -25,16 +25,16 @@ internal class BLPop(SubscriptionManager subscriptionManager, IStorage storage, 
 
         if (TryPop(key, 1, out var removedItems)) return new[] {key, removedItems[0]}.ToBulkStringArray();
         
-        subscriptionManager.SubscribeFor(EventType.ListPushed, key, connection.Id);
+        pubSub.Subscribe(EventType.ListPushed, key, connection.Id);
 
         var stopwatch = Stopwatch.StartNew();
-        while (!subscriptionManager.IsEventFired(EventType.ListPushed, key, connection.Id) &&
+        while (!pubSub.IsEventFired(EventType.ListPushed, key, connection.Id) &&
                !IsTimedOut(timeoutMs, stopwatch))
         {
             await Task.Delay(DelayMs);
         }
         
-        var payload = subscriptionManager.UnsubscribeFrom(EventType.ListPushed, key, connection.Id);
+        var payload = pubSub.Unsubscribe(EventType.ListPushed, key, connection.Id);
         return payload == null ? NullBulkStringArray : new[] {key, payload}.ToBulkStringArray();
     }
     

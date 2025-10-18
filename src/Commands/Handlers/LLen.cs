@@ -18,12 +18,12 @@ internal class LLen(IStorage storage, Settings settings) : BaseHandler(settings)
         var typedValue = storage.Get(key);
         if (typedValue == null)
         {
-            return 0.ToIntegerString();
+            return 0.ToIntegerValue();
         }
 
         if (!ValidateValueType(typedValue, out var error)) return error!;
 
         var list = typedValue.Value.GetAsStringList();
-        return list.Count.ToIntegerString();
+        return list.Count.ToIntegerValue();
     }
 }

@@ -24,5 +24,7 @@ public enum CommandType
     RPush,
     LRange,
     LPop,
-    BLPop
+    BLPop,
+    
+    Subscribe,
 }

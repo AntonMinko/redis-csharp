@@ -32,13 +32,19 @@ internal static class RedisTypesExtensions
         return new RedisValue(BulkString, value);
     }
 
-    public static RedisValue ToBulkStringArray(this IEnumerable<string> strings)
+    public static RedisValue ToBulkStringArray(this IEnumerable<object> items)
     {
         var sb = new StringBuilder();
         int count = 0;
-        foreach (var s in strings)
+        foreach (var item in items)
         {
-            sb.Append(s.ToBulkStringContent());
+            string content = item switch
+            {
+                int i => i.ToIntegerString(),
+                _ => item.ToString()!.ToBulkStringContent()
+            }
+            ;
+            sb.Append(content);
             count++;
         }
 
@@ -55,10 +61,12 @@ internal static class RedisTypesExtensions
         return new RedisValue(BinaryContent, prefix.Concat(bytes));
     }
 
-    public static RedisValue ToIntegerString(this int value)
+    public static RedisValue ToIntegerValue(this int value)
     {
-        return new(Integer, Encoding.UTF8.GetBytes($":{value}\r\n"));
+        return new(Integer, Encoding.UTF8.GetBytes(value.ToIntegerString()));
     }
     
+    public static string ToIntegerString(this int value) => $":{value}\r\n";
+
     private static string ToBulkStringContent(this string s) => $"${s.Length}\r\n{s}\r\n";
 }
