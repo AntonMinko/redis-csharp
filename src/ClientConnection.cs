@@ -9,4 +9,6 @@ internal class ClientConnection(int id, Socket socket)
     public long LastCommandOffset { get; set; }
 
     public bool IsReplicaConnection => Id == -1;
+    
+    public bool InSubscribedMode { get; set; }
 }

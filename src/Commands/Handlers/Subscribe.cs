@@ -14,6 +14,7 @@ internal class Subscribe(PubSub pubSub, Settings settings) : BaseHandler(setting
         var channel = command.Arguments[0];
         
         int subscriptions = pubSub.Subscribe(EventType.Subscription, channel, connection.Id);
+        connection.InSubscribedMode = true;
 
         return new object[] { "subscribe", channel, subscriptions }.ToBulkStringArray();
     }

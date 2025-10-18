@@ -27,6 +27,7 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
     public async Task<RedisValue> HandleAsync(Command command, ClientConnection connection)
     {
         if (!ValidateRole(command, connection, out var error) ||
+            !ValidateSubscribedMode(command, connection, out error) ||
             !ValidateArguments(command, out error))
         {
             return error!;
@@ -65,6 +66,17 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
 
         error = $"Only {roleAttribute.Role} can handle {command.Type} command".ToErrorString();
         return false;
+    }
+    
+    private bool ValidateSubscribedMode(Command command, ClientConnection connection, out RedisValue? error)
+    {
+        error = $"Can't execute '{command.Type.ToString().ToLowerInvariant()}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context".ToErrorString();
+        var attribute = GetAttribute<SupportedInSubscribedModeAttribute>();
+        if (attribute is null) return connection.InSubscribedMode == false;
+
+        if (connection.InSubscribedMode && !attribute.IsSupported) return false;
+
+        return true;
     }
 
     private T? GetAttribute<T>() where T : Attribute => (T?) Attribute.GetCustomAttribute(this.GetType(), typeof(T));
