@@ -1,4 +1,6 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands.Handlers;
 
@@ -9,15 +11,15 @@ internal class LRange(IStorage storage, Settings settings) : BaseHandler(setting
     public override CommandType CommandType => CommandType.LRange;
     public override bool SupportsReplication => false;
 
-    protected override Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var key = command.Arguments[0];
         int start = Convert.ToInt32(command.Arguments[1]);
         int end = Convert.ToInt32(command.Arguments[2]);
 
         var typedValue = storage.Get(key);
-        if (typedValue == null) return Task.FromResult(EmptyBulkStringArray);
-        if (!ValidateValueType(typedValue, out var error)) return Task.FromResult(error!);
+        if (typedValue == null) return EmptyBulkStringArray;
+        if (!ValidateValueType(typedValue, out var error)) return error!;
 
         var list = typedValue.Value.GetAsStringList();
 
@@ -31,7 +33,7 @@ internal class LRange(IStorage storage, Settings settings) : BaseHandler(setting
         end = end >= list.Count ? list.Count - 1 : end;
         int count = end - start + 1;
         
-        if (count <= 0) return Task.FromResult(EmptyBulkStringArray);
-        return Task.FromResult(list.Skip(start).Take(count).ToBulkStringArray());
+        if (count <= 0) return EmptyBulkStringArray;
+        return list.Skip(start).Take(count).ToBulkStringArray();
     }
 }

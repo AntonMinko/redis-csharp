@@ -1,4 +1,4 @@
-namespace codecrafters_redis;
+namespace codecrafters_redis.Storage;
 
 enum ValueType
 {

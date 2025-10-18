@@ -1,4 +1,6 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands;
 
@@ -6,10 +8,12 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
 {
     public abstract CommandType CommandType { get; }
     public abstract bool SupportsReplication { get; }
+    public virtual bool LongOperation => false;
     protected Settings Settings { get; } = settings;
-    protected abstract Task<RedisValue> HandleSpecific(Command command, ClientConnection connection);
+    protected virtual Task<RedisValue> HandleSpecificAsync(Command command, ClientConnection connection) => throw new NotImplementedException();
+    protected virtual RedisValue HandleSpecific(Command command, ClientConnection connection) => throw new NotImplementedException();
 
-    public async Task<RedisValue> Handle(Command command, ClientConnection connection)
+    public RedisValue Handle(Command command, ClientConnection connection)
     {
         if (!ValidateRole(command, connection, out var error) ||
             !ValidateArguments(command, out error))
@@ -17,7 +21,18 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
             return error!;
         }
         
-        return await HandleSpecific(command, connection);
+        return HandleSpecific(command, connection);
+    }
+
+    public async Task<RedisValue> HandleAsync(Command command, ClientConnection connection)
+    {
+        if (!ValidateRole(command, connection, out var error) ||
+            !ValidateArguments(command, out error))
+        {
+            return error!;
+        }
+        
+        return await HandleSpecificAsync(command, connection);
     }
 
     private bool ValidateArguments(Command command, out RedisValue? error)

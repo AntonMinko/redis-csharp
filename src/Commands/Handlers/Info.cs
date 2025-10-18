@@ -9,7 +9,7 @@ internal class Info(Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.Info;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string section = command.Arguments.Length >= 1 ? command.Arguments[0].ToUpperInvariant() : "";
 

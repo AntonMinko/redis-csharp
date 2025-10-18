@@ -1,4 +1,6 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands.Handlers;
 
@@ -9,7 +11,7 @@ internal class Get(IStorage storage, Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.Get;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var key = command.Arguments[0];
         var typedValue = storage.Get(key);

@@ -7,6 +7,6 @@ internal class Echo(Settings settings) : BaseHandler(settings)
 {
     public override CommandType CommandType => CommandType.Echo;
     public override bool SupportsReplication => false;
-    protected override Task<RedisValue> HandleSpecific(Command command, ClientConnection connection) =>
-        Task.FromResult(command.Arguments[0].ToSimpleString());
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection) =>
+        command.Arguments[0].ToSimpleString();
 }

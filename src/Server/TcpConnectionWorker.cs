@@ -2,14 +2,14 @@ using System.Net.Sockets;
 using System.Text;
 using codecrafters_redis.Commands;
 
-namespace codecrafters_redis;
+namespace codecrafters_redis.Server;
 
 internal interface IWorker
 {
     Task<bool> HandleConnectionAsync(ClientConnection connection);
 }
 
-internal class TcpConnectionWorker(Processor processor, Settings settings, MasterManager masterManager): IWorker
+internal class TcpConnectionWorker(Processor processor): IWorker
 {
     public async Task<bool> HandleConnectionAsync(ClientConnection connection)
     {

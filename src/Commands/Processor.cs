@@ -13,7 +13,9 @@ internal class Processor(IEnumerable<ICommandHandler> commandHandlers, MasterMan
 
         if (_commandHandlers.TryGetValue(command.Type, out var handler))
         {
-            var response = await handler.Handle(command, connection);
+            var response = handler.LongOperation
+                ? await handler.HandleAsync(command, connection)
+                : handler.Handle(command, connection);
             
             if (response.Success && handler.SupportsReplication)
             {

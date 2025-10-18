@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace codecrafters_redis;
+namespace codecrafters_redis.Server;
 
 public class Server(IServiceProvider serviceProvider, Settings settings)
 {

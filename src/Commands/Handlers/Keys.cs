@@ -1,4 +1,5 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
 
 namespace codecrafters_redis.Commands.Handlers;
 
@@ -8,7 +9,7 @@ internal class Keys(IStorage storage, Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.Keys;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string pattern = command.Arguments[0].ToUpperInvariant();
 

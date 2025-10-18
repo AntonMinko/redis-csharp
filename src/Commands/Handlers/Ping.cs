@@ -4,5 +4,9 @@ internal class Ping : ICommandHandler
 {
     public CommandType CommandType => CommandType.Ping;
     public bool SupportsReplication => false;
-    public Task<RedisValue> Handle(Command command, ClientConnection connection) => Task.FromResult("PONG".ToSimpleString());
+    public bool LongOperation => false;
+
+    RedisValue ICommandHandler.Handle(Command command, ClientConnection connection) => "PONG".ToSimpleString();
+
+    public Task<RedisValue> HandleAsync(Command command, ClientConnection connection) => throw new NotImplementedException();
 }

@@ -1,6 +1,7 @@
 using codecrafters_redis.Persistence;
+using codecrafters_redis.Storage;
 
-namespace codecrafters_redis;
+namespace codecrafters_redis.Server;
 
 internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, IStorage storage)
 {
@@ -12,13 +13,13 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
         var kvp = ParseArgs(args);
         await HandleDirSetting(kvp, userSettings);
         await HandleDbFilenameSetting(kvp, userSettings);
-        await HandlePortSetting(kvp, userSettings);
-        await HandleReplicaSettings(kvp, userSettings);
+        HandlePortSetting(kvp, userSettings);
+        HandleReplicaSettings(kvp, userSettings);
         
         await LoadFromBackupFile(userSettings.Persistence.Dir, userSettings.Persistence.DbFileName);
     }
 
-    private async Task HandleReplicaSettings(Dictionary<string, string> kvp, Settings userSettings)
+    private void HandleReplicaSettings(Dictionary<string, string> kvp, Settings userSettings)
     {
         if (kvp.TryGetValue("--replicaof", out var replicaOf))
         {
@@ -50,7 +51,7 @@ internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, ISt
         }
     }
 
-    private static async Task HandlePortSetting(Dictionary<string, string> kvp, Settings userSettings)
+    private static void HandlePortSetting(Dictionary<string, string> kvp, Settings userSettings)
     {
         if (!kvp.TryGetValue("--port", out var port)) return;
         userSettings.Runtime.Port = int.Parse(port);

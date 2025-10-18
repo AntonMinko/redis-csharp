@@ -8,8 +8,9 @@ internal class Wait(MasterManager masterManager, Settings settings) : BaseHandle
 {
     public override CommandType CommandType => CommandType.Wait;
     public override bool SupportsReplication => false;
+    public override bool LongOperation => true;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override async Task<RedisValue> HandleSpecificAsync(Command command, ClientConnection connection)
     {
         int expectReplicas = int.Parse(command.Arguments[0]);
         int timeoutMs = int.Parse(command.Arguments[1]);

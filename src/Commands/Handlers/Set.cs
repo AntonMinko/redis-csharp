@@ -1,4 +1,6 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands.Handlers;
 
@@ -9,7 +11,7 @@ internal class Set(IStorage storage, Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.Set;
     public override bool SupportsReplication => true;
 
-    protected override Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var key = command.Arguments[0];
         var value = command.Arguments[1];
@@ -23,6 +25,6 @@ internal class Set(IStorage storage, Settings settings) : BaseHandler(settings)
         }
         
         storage.Set(key, new(ValueType.String, value), expiresAfterMs);
-        return Task.FromResult(OkBytes);
+        return OkBytes;
     }
 }

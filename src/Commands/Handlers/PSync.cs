@@ -8,7 +8,7 @@ internal class PSync(MasterManager masterManager, Settings settings) : BaseHandl
     public override CommandType CommandType => CommandType.PSync;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var masterReplId = Settings.Replication.MasterReplicaSettings!.MasterReplId;
         var masterReplOffset = Settings.Replication.MasterReplicaSettings.MasterReplOffset;

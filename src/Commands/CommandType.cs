@@ -1,21 +1,28 @@
+// ReSharper disable InconsistentNaming
 namespace codecrafters_redis.Commands;
 
 public enum CommandType
 {
     Unknown,
-    Config,
-    Echo,
+    
     Get,
-    Info,
-    Keys,
-    LLen,
-    LPop,
-    LPush,
-    LRange,
-    Ping,
-    ReplConf,
-    RPush,
-    PSync,
     Set,
+    Keys,
+
+    Ping,
+    Echo,
+    
+    Config,
+    Info,
+    
+    ReplConf,
+    PSync,
     Wait,
+    
+    LLen,
+    LPush,
+    RPush,
+    LRange,
+    LPop,
+    BLPop
 }

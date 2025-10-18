@@ -1,4 +1,6 @@
 using codecrafters_redis.Commands.Handlers.Validation;
+using codecrafters_redis.Storage;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands.Handlers;
 
@@ -9,19 +11,19 @@ internal class LLen(IStorage storage, Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.LLen;
     public override bool SupportsReplication => false;
 
-    protected override Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var key = command.Arguments[0];
 
         var typedValue = storage.Get(key);
         if (typedValue == null)
         {
-            return Task.FromResult(0.ToIntegerString());
+            return 0.ToIntegerString();
         }
 
-        if (!ValidateValueType(typedValue, out var error)) return Task.FromResult(error!);
+        if (!ValidateValueType(typedValue, out var error)) return error!;
 
         var list = typedValue.Value.GetAsStringList();
-        return Task.FromResult(list.Count.ToIntegerString());
+        return list.Count.ToIntegerString();
     }
 }

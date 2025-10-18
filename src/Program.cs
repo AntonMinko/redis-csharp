@@ -1,5 +1,8 @@
 using codecrafters_redis.Commands;
 using codecrafters_redis.Commands.Handlers;
+using codecrafters_redis.Server;
+using codecrafters_redis.Storage;
+using codecrafters_redis.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
 
 var userSettingsProvider = new UserSettingsProvider();
@@ -13,11 +16,13 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<IStorage, KvpStorage>()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
+    .AddSingleton<SubscriptionManager>()
     .AddTransient<ServerInitializer>()
     .AddTransient<IWorker, TcpConnectionWorker>()
     .AddTransient<Processor>();
 
 serviceBuilder
+    .AddTransient<ICommandHandler, BLPop>()
     .AddTransient<ICommandHandler, Config>()
     .AddTransient<ICommandHandler, Echo>()
     .AddTransient<ICommandHandler, Get>()

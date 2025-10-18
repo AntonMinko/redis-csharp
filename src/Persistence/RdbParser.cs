@@ -1,4 +1,6 @@
+using codecrafters_redis.Storage;
 using static System.Text.Encoding;
+using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Persistence;
 

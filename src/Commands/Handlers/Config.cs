@@ -8,7 +8,7 @@ internal class Config(Settings settings) : BaseHandler(settings)
     public override CommandType CommandType => CommandType.Config;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         var subCommand = command.Arguments[0];
 

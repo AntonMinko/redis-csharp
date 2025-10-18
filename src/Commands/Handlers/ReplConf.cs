@@ -9,7 +9,7 @@ internal class ReplConf(MasterManager masterManager, Settings settings) : BaseHa
     public override CommandType CommandType => CommandType.ReplConf;
     public override bool SupportsReplication => false;
 
-    protected override async Task<RedisValue> HandleSpecific(Command command, ClientConnection connection)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string commandSubtype = command.Arguments[0];
         switch (commandSubtype)

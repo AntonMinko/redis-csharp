@@ -4,6 +4,8 @@ internal interface ICommandHandler
 {
     CommandType CommandType { get; }
     bool SupportsReplication { get; }
+    bool LongOperation { get; }
 
-    Task<RedisValue> Handle(Command command, ClientConnection connection);
+    RedisValue Handle(Command command, ClientConnection connection);
+    Task<RedisValue> HandleAsync(Command command, ClientConnection connection);
 }
