@@ -4,6 +4,7 @@ using codecrafters_redis.Subscriptions;
 namespace codecrafters_redis.Commands.Handlers;
 
 [Arguments(Min = 1)]
+[SupportedInSubscribedMode(IsSupported = true)]
 internal class Subscribe(PubSub pubSub, Settings settings) : BaseHandler(settings)
 {
     public override CommandType CommandType => CommandType.Subscribe;

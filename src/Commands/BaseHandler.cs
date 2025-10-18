@@ -16,6 +16,7 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
     public RedisValue Handle(Command command, ClientConnection connection)
     {
         if (!ValidateRole(command, connection, out var error) ||
+            !ValidateSubscribedMode(command, connection, out error) ||
             !ValidateArguments(command, out error))
         {
             return error!;
@@ -70,7 +71,7 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
     
     private bool ValidateSubscribedMode(Command command, ClientConnection connection, out RedisValue? error)
     {
-        error = $"Can't execute '{command.Type.ToString().ToLowerInvariant()}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context".ToErrorString();
+        error = $"ERR Can't execute '{command.Type.ToString().ToLowerInvariant()}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context".ToErrorString();
         var attribute = GetAttribute<SupportedInSubscribedModeAttribute>();
         if (attribute is null) return connection.InSubscribedMode == false;
 
