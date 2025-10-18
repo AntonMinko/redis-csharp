@@ -25,7 +25,7 @@ internal class PubSub
         subscriptions.AddLast(new Subscription(subscriberId));
         _subscriptions[subscriptionKey] = subscriptions;
         
-        _subscribers[subscriberId] = _subscribers.ContainsKey(subscriberId) ? _subscribers[subscriberId]++ : 1;
+        _subscribers[subscriberId] = _subscribers.ContainsKey(subscriberId) ? ++_subscribers[subscriberId] : 1;
         return _subscribers[subscriberId];
     }
 
