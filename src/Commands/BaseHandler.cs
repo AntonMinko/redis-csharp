@@ -1,6 +1,4 @@
 using codecrafters_redis.Commands.Handlers.Validation;
-using codecrafters_redis.Storage;
-using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands;
 
@@ -81,20 +79,4 @@ internal abstract class BaseHandler(Settings settings) : ICommandHandler
     }
 
     private T? GetAttribute<T>() where T : Attribute => (T?) Attribute.GetCustomAttribute(this.GetType(), typeof(T));
-
-    protected bool ValidateValueType(TypedValue? value, out RedisValue? error)
-    {
-        error = null;
-        if (value is null) return true;
-        
-        var supportsAttribute = GetAttribute<SupportsAttribute>();
-        if (supportsAttribute is null) return true;
-        
-        if (supportsAttribute.StorageType != ValueType.Unknown && supportsAttribute.StorageType != value.Value.Type)
-        {
-            error = "WRONGTYPE Operation against a key holding the wrong kind of value".ToErrorString();
-            return false;
-        }
-        return true;
-    }
 }

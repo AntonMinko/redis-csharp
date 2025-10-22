@@ -3,7 +3,7 @@ using codecrafters_redis.Storage;
 
 namespace codecrafters_redis.Server;
 
-internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, IStorage storage)
+internal class ServerInitializer(IUserSettingsProvider userSettingsProvider, KvpStorage storage)
 {
     internal async Task Initialize(string[] args)
     {

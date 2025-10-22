@@ -14,7 +14,7 @@ internal class Unsubscribe(PubSub pubSub, Settings settings) : BaseHandler(setti
     {
         var channel = command.Arguments[0];
         
-        int subscriptions = pubSub.Unsubscribe(EventType.Subscription, channel, connection);
+        int subscriptions = pubSub.Unsubscribe(EventType.Subscription, channel, connection.Id);
 
         return new object[] { "unsubscribe", channel, subscriptions }.ToBulkStringArray();
     }

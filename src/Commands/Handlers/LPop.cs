@@ -5,8 +5,7 @@ using ValueType = codecrafters_redis.Storage.ValueType;
 namespace codecrafters_redis.Commands.Handlers;
 
 [Arguments(Min = 1, Max = 2)]
-[Supports(StorageType = ValueType.StringArray)]
-internal class LPop(IStorage storage, Settings settings) : LPopBase(storage, settings)
+internal class LPop(ListStorage storage, Settings settings) : LPopBase(storage, settings)
 {
     public override CommandType CommandType => CommandType.LPop;
     public override bool SupportsReplication => false;

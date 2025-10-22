@@ -8,6 +8,7 @@ public enum CommandType
     Get,
     Set,
     Keys,
+    Type,
 
     Ping,
     Echo,

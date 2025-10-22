@@ -2,9 +2,9 @@ namespace codecrafters_redis.Storage;
 
 enum ValueType
 {
-    Unknown,
+    None,
     String,
-    StringArray
+    List
 }
 
 internal record struct TypedValue(ValueType Type, object Value)
@@ -14,13 +14,3 @@ internal record struct TypedValue(ValueType Type, object Value)
 }
 
 internal record struct StorageValue(TypedValue Value, DateTime? ExpireAt = null);
-
-
-internal interface IStorage
-{
-    void Set(string key, TypedValue value, int? expireAfterMs = null);
-    TypedValue? Get(string key);
-    void Remove(string key);
-    void Initialize(IDictionary<string, StorageValue> loadedData);
-    IEnumerable<string> GetAllKeys();
-}

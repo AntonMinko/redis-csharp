@@ -4,6 +4,7 @@ using codecrafters_redis.Server;
 using codecrafters_redis.Storage;
 using codecrafters_redis.Subscriptions;
 using Microsoft.Extensions.DependencyInjection;
+using Type = codecrafters_redis.Commands.Handlers.Type;
 
 var userSettingsProvider = new UserSettingsProvider();
 await userSettingsProvider.InitializeUserSettingsAsync();
@@ -13,7 +14,9 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<IUserSettingsProvider>(userSettingsProvider)
     .AddSingleton(userSettings)
     .AddSingleton<Server>()
-    .AddSingleton<IStorage, KvpStorage>()
+    .AddSingleton<KvpStorage>()
+    .AddSingleton<ListStorage>()
+    .AddSingleton<StorageManager>()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
     .AddSingleton<PubSub>()
@@ -39,6 +42,7 @@ serviceBuilder
     .AddTransient<ICommandHandler, RPush>()
     .AddTransient<ICommandHandler, Set>()
     .AddTransient<ICommandHandler, Subscribe>()
+    .AddTransient<ICommandHandler, Type>()
     .AddTransient<ICommandHandler, Unsubscribe>()
     .AddTransient<ICommandHandler, Wait>();
 

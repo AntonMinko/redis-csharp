@@ -2,32 +2,18 @@ using codecrafters_redis.Storage;
 
 namespace codecrafters_redis.Commands.Handlers;
 
-internal abstract class LPopBase(IStorage storage, Settings settings) : BaseHandler(settings)
+internal abstract class LPopBase(ListStorage storage, Settings settings) : BaseHandler(settings)
 {
-    protected bool TryPop(string key, int count, out List<string> removedItems)
+    protected bool TryPop(string key, int count, out List<string> removedValues)
     {
-        removedItems = [];
-        var typedValue = storage.Get(key);
-        if (typedValue == null) return false;
-        if (!ValidateValueType(typedValue, out var error)) return false;
-        
-        var list = typedValue.Value.GetAsStringList();
-        while (count > 0 && list.Count > 0)
+        removedValues = [];
+
+        while (count > 0 && storage.TryRemoveFirst(key, out var value))
         {
-            removedItems.Add(list.First());
-            list.RemoveFirst();
+            removedValues.Add(value!);
             count--;
         }
-        
-        if (list.Count == 0)
-        {
-            storage.Remove(key);
-        }
-        else
-        {
-            storage.Set(key, typedValue.Value);
-        }
 
-        return true;
+        return removedValues.Count > 0;
     }
 }

@@ -79,7 +79,7 @@ internal class RdbParser
         }
     }
 
-    private async Task<IDictionary<string, StorageValue>> ParseDatabaseAsync(Stream stream, byte[] buffer)
+    private async Task<IDictionary<string, StorageStringValue>> ParseDatabaseAsync(Stream stream, byte[] buffer)
     {
         var hashTableMarker = (byte)stream.ReadByte();
         if (hashTableMarker != 0xFB)
@@ -87,7 +87,7 @@ internal class RdbParser
             throw new InvalidDataException($"Unexpected content. Expected 0xFB byte indicating the start of hash table, but was {hashTableMarker}");
         }
 
-        var kvp = new Dictionary<string, StorageValue>();
+        var kvp = new Dictionary<string, StorageStringValue>();
         
         var parsedTotalKeys = await GetLengthEncodedIntAsync(stream, buffer);
         var parsedKeysWithExpiration = await GetLengthEncodedIntAsync(stream, buffer);
@@ -125,7 +125,7 @@ internal class RdbParser
             
             string key = await ReadStringAsync(stream, buffer);
             string value = await ReadStringAsync(stream, buffer);
-            kvp.Add(key, new StorageValue(new(ValueType.String, value), expiresAt));
+            kvp.Add(key, new StorageStringValue(value, expiresAt));
         }
 
         return kvp;
@@ -155,7 +155,7 @@ internal class RdbParser
     {
         buffer[0] = (byte)stream.ReadByte();
         var firstTwoBits = (buffer[0] & 0b1100_0000) >> 6;
-        int result = 0;
+        int result;
         switch (firstTwoBits)
         {
             case 0b00:
@@ -217,5 +217,5 @@ internal class DataModel
     public int RdbVersion { get; set; }
     public Dictionary<string, string> Metadata { get; } = new();
     
-    public Dictionary<int, IDictionary<string, StorageValue>> Databases { get; } = new();
+    public Dictionary<int, IDictionary<string, StorageStringValue>> Databases { get; } = new();
 }

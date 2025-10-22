@@ -1,12 +1,11 @@
 using codecrafters_redis.Commands.Handlers.Validation;
 using codecrafters_redis.Storage;
-using ValueType = codecrafters_redis.Storage.ValueType;
 
 namespace codecrafters_redis.Commands.Handlers;
 
 [Arguments(Min = 2)]
 [ReplicationRole(Role = ReplicationRole.Master)]
-internal class Set(IStorage storage, Settings settings) : BaseHandler(settings)
+internal class Set(KvpStorage storage, Settings settings) : BaseHandler(settings)
 {
     public override CommandType CommandType => CommandType.Set;
     public override bool SupportsReplication => true;
@@ -24,7 +23,7 @@ internal class Set(IStorage storage, Settings settings) : BaseHandler(settings)
             }
         }
         
-        storage.Set(key, new(ValueType.String, value), expiresAfterMs);
+        storage.Set(key, value, expiresAfterMs);
         return OkBytes;
     }
 }

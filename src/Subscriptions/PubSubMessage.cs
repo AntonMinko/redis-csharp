@@ -1,3 +1,3 @@
 namespace codecrafters_redis.Subscriptions;
 
-internal record PubSubMessage(string Channel, string Message);
+internal record PubSubMessage(EventType Type, string Channel, string Message);

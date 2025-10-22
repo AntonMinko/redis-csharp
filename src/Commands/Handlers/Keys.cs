@@ -4,7 +4,7 @@ using codecrafters_redis.Storage;
 namespace codecrafters_redis.Commands.Handlers;
 
 [Arguments(Min = 1, Max = 2)]
-internal class Keys(IStorage storage, Settings settings) : BaseHandler(settings)
+internal class Keys(StorageManager storageManager, Settings settings) : BaseHandler(settings)
 {
     public override CommandType CommandType => CommandType.Keys;
     public override bool SupportsReplication => false;
@@ -18,6 +18,6 @@ internal class Keys(IStorage storage, Settings settings) : BaseHandler(settings)
             $"Unsupported keys pattern: {pattern}".WriteLineEncoded();
         }
         
-        return storage.GetAllKeys().ToArray().ToBulkStringArray();
+        return storageManager.GetAllKeys().ToArray().ToBulkStringArray();
     }
 }
