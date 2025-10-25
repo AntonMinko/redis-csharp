@@ -18,8 +18,6 @@ internal class ListStorage(PubSub pubSub)
         return false;
     }
 
-    //public void Set(string key, LinkedList<string> value) => _store[key] = value;
-
     public int AddFirst(string key, IEnumerable<string> values)
     {
         var list = GetOrAdd(key);

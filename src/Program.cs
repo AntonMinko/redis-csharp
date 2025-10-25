@@ -14,15 +14,18 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<IUserSettingsProvider>(userSettingsProvider)
     .AddSingleton(userSettings)
     .AddSingleton<Server>()
-    .AddSingleton<KvpStorage>()
-    .AddSingleton<ListStorage>()
-    .AddSingleton<StorageManager>()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
     .AddSingleton<PubSub>()
     .AddTransient<ServerInitializer>()
     .AddTransient<IWorker, TcpConnectionWorker>()
     .AddTransient<Processor>();
+
+serviceBuilder
+    .AddSingleton<KvpStorage>()
+    .AddSingleton<ListStorage>()
+    .AddSingleton<StreamStorage>()
+    .AddSingleton<StorageManager>();
 
 serviceBuilder
     .AddTransient<ICommandHandler, BLPop>()
@@ -44,7 +47,8 @@ serviceBuilder
     .AddTransient<ICommandHandler, Subscribe>()
     .AddTransient<ICommandHandler, Type>()
     .AddTransient<ICommandHandler, Unsubscribe>()
-    .AddTransient<ICommandHandler, Wait>();
+    .AddTransient<ICommandHandler, Wait>()
+    .AddTransient<ICommandHandler, XAdd>();
 
 var services = serviceBuilder
     .BuildServiceProvider();

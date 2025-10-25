@@ -30,4 +30,6 @@ public enum CommandType
     Subscribe,
     Publish,
     Unsubscribe,
+    
+    XAdd,
 }

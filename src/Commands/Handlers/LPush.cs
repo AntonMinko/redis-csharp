@@ -1,6 +1,5 @@
 using codecrafters_redis.Commands.Handlers.Validation;
 using codecrafters_redis.Storage;
-using codecrafters_redis.Subscriptions;
 
 namespace codecrafters_redis.Commands.Handlers;
 

@@ -24,13 +24,6 @@ internal static class RedisTypesExtensions
         var value = s == null ? Encoding.UTF8.GetBytes("$-1\r\n") : Encoding.UTF8.GetBytes(s.ToBulkStringContent());
         return new RedisValue(BulkString, value);
     }
-    
-    public static RedisValue ToBulkString(this TypedValue? typedValue)
-    {
-        string? stringValue = typedValue?.GetAsString();
-        var value = stringValue == null ? Encoding.UTF8.GetBytes("$-1\r\n") : Encoding.UTF8.GetBytes(stringValue.ToBulkStringContent());
-        return new RedisValue(BulkString, value);
-    }
 
     public static RedisValue ToBulkStringArray(this IEnumerable<object> items)
     {
